@@ -240,37 +240,23 @@ BFF or Microservices
 ## CAP Theorem
 
 One of the most fundamental concepts in distributed systems (like MSA).  
-Distributed system can only guarantee two of these three things at the same time:
+Distributed system can only **guarantee two of three** things at the same time:
 
-| ✅ Term                | What it means (simple)                                               |
+| Term                | What it means (simple)                                                 |  
 | ---------------------- | -------------------------------------------------------------------- |
 | ✅ Consistency         | All nodes **see the same data** at the same time.                    |
 | ✅ Availability        | The system **always responds**, even if it’s not the freshest data.  |
 | ✅ Partition Tolerance | The system **still works** even if one server can’t talk to another. |
 
-**CAP Examples:**
+You need **Partition tolerance** anyway, so you choose between **C**, **A**.
 
-1. **Group Chat**
+> 💡 Network partition in this case is **flaky connection** type of situation. We are not talking *no internet* at all or *airplane mode* 
 
-3 friends are chatting in a group chat.
+**Examples**
 
-- prioritize C + A: (cant handle partition) stop chatting until all are reconnected.
-- prioritize C + P: (cant be always available) some messages delayed or dropped to ensure consistency.
-- prioritize A + P: (cant ensure consistency) keep chatting, but some messages might be missing or out of order.
-
-2. **Booking Service**  
-   **C + P**
-
-- **Consistency:** You don’t want two users to book the same seat.
-- **Partition Tolerance:** Services are in different zones.
-- ✅ _OK to cancel a request during downtime._
-
-3. **Product Catalog**  
-   **A + P**
-
-- **Availability:** Users must always see something.
-- **Partition Tolerance:** Products come from a distributed system.
-- ✅ _OK to give slightly outdated prices._
+- **PostgreSQL** - 100% **CP** because when network partition happens, we prioritise data consistency. Better fail than risk 
+inconsistent results (multiple users book same room, triple payment withdrawal)
+- **Group chat** - **CA** because it is better to get messages out of order / duplicates than just freeze UI
 
 ## Distributed Transactions and Saga
 

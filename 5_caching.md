@@ -2,41 +2,72 @@
 
 ## 📚 Caching Strategies Explained (Beginner-Friendly)
 
+What you **need to understand** are concepts behind those names.  
+There are **two questions to answer**
+1. Who controls the cache ?
+  - App
+  - Cache system
+2. When and how does data move between **cache** and **DB**
+ - on read
+ - on write
+ - sync
+ - async
+
+Those names below are just **labels for common** combinations used in real-world to **simplify things**:
+
+### TTL
+
+Cache for a **fixed period of time** and then expire when it pases
+
 ---
 
 ### (Read) Cache-Aside
 
-1. **App controls** the cache. Cache invalidation is **your responsibility**
-2. Cache Hit ➔ return data.
-3. Cache Miss ➔ query DB, **store in cache**, return result
+**Very popular** one
 
-**Most common** in real **read-heavy**: user profiles, catalogs, settings
+1. **App controls** the cache.
+2. Cache miss -> read from DB.
+3. Later decide if you need to cache it
 
 ---
 
 ### (Read) Read-Through
 
-1. **Cache layer controls** the cache. App **never talks to DB**, caching layer is a proxy
-2. Cache Hit ➔ return data.
-3. Cache Miss ➔ **cache itself** queries DB, stores data, returns result
+1. **Cache layer controls** the cache. 
+2. Cache Miss -> **cache itself** does its workflow, saves things how it wants, returns result
 
 **Much less common** in simple apps, less customization
+
 ---
 
-### (Write) Write-Through
+### (Write sync) Write-Through
 
-1. App writes to DB and cache at **the same time**
-3. Only after **both succeed** write is complete
+1. Write to one, and then another **synchronously** (order is up to you)
+2. After a write completes, cache and DB are **guaranteed to be consistent**
 
 **Cache is consistent**. Used in finance, inventory, when **stale data is unecceptable**. Writes are slow
 
 ---
 
-### (Write) Write-behind
-1. App **writes to cache first**
-2. Background worker writes data to DB
+### (Write async) Write-behind / Write-back
+
+1. App **writes to cache** first
+2. Background worker **asynchronously** writes data to DB
 
 **Cache is eventually consistent**, writes are fast
+
+### Write-around
+
+- Writes **go only to DB**, not cache.
+- Cache is updated later on read.
+
+**Avoid polluting cache** with rarely-read data
+
+### Refresh-ahead
+
+- Cache refreshes data **before TTL expires**
+
+Used for **hot products**, currently **trending** searches
 
 ## 📊 **Summary Table**
 
