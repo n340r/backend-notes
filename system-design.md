@@ -1,6 +1,6 @@
 # Видосы
 
-### [Почему все проваливают](https://www.youtube.com/watch?v=HRPcPNJ5zTg&list=WL&index=7)
+### База, советы
 
 1. Требования: функциональные, нефункциональные
 2. Нагрузка:
@@ -72,13 +72,13 @@ user --> service --> database (монолит) - это плохо
 
 ---
 
-### [Как пройти System Design](https://www.youtube.com/watch?v=P3im7VW0mnw&list=WL&index=8) 
+### [Индус когда какую БД использовать](https://www.youtube.com/watch?v=cODCpXtPHbQ)
 
-- Повтор презентации выше
+- Ахуенно, обязательно к просмотру
 
---- 
+---
 
-### [Мок 1](https://www.youtube.com/watch?v=qsEvKryZ5YA&list=WL&index=12)
+### [Балун Мок 1](https://www.youtube.com/watch?v=qsEvKryZ5YA&list=WL&index=12)
 
 *Седой чел в очках, Tinder*
 
@@ -88,7 +88,7 @@ user --> service --> database (монолит) - это плохо
 
 ---
 
-### [Мок 3](https://www.youtube.com/watch?v=hCg4N-r_kF0&list=WL&index=5)
+### [Балун Мок 3](https://www.youtube.com/watch?v=hCg4N-r_kF0&list=WL&index=5)
 
 *Озон тимлид с лгбт микро и бородатый чел сверху*
 
@@ -98,20 +98,8 @@ user --> service --> database (монолит) - это плохо
 
 ---
 
-### [Индус messenger](https://www.youtube.com/watch?v=RjQjbJ2UJDg)
-
-- Норм, в целом понятно даже если не прям следить за ходом мысли.
-- Очень много деталей, в идеале вдумчиво смотреть
-
----
-
-### [Индус airbnb booking](https://www.youtube.com/watch?v=YyOXt2MEkv4)
-
-- Ахуенно, все понятно.
-- Нужно, конечно вдумываться и с первого раза все не закомнишь, но оч круто
-
----
-
-### [Индус twitter](https://www.youtube.com/watch?v=EkudBdvbDhs&t=2s)
+### [Индус twitter](https://www.youtube.com/watch?v=EkudBdvbDhs)
 
 - Тоже супер понятно, но под конец начинаются детали и нужно прям вдумываться. Много полезных концепций про кэширование
+- Дальше Facebook, Amazon и вообще все с этого канала можно залпом смотреть
+
