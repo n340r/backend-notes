@@ -368,17 +368,16 @@ amqp.connect("amqp://localhost", (error0, connection) => {
 
 ## Transactional Outbox
 
-It Centers around the idea of guaranteed message delivery.  
-The primary goal is to ensure that crucial events or messages are delivered, even if some parts of the system are temporarily unavailable.
+**Core problem:** How do I **reliably publish events** when my system changes state, **without losing or duplicating** events?
 
 **Example:**
-
 `FlightService` -- displays flight info to the frontend.  
 `ScheduleService` -- keeps the flight schedule up to date.  
+
 `ScheduleService` --(RabbitMQ)--> `FlightService`.  
 If `ScheduleService` updates local DB but the message is not sent, `FlightService` displays stale data.
 
-**Transactional outbox** - Instead of trying to send the event right away, we save the event to the database first, in the same transaction as the main data change.
+**Transactional outbox** - Instead of trying to send the event right away, we save the event to the **outbox table** first, in the same transaction as the main data change.
 
 - Later background worker picks up saved event
 - Sends it to the message broker
@@ -397,7 +396,9 @@ Step 4: Marks it as sent
 ```
 
 > 💡 Background worker might be a simple NodeJS loop that checks outbox table once a few ms.
+
 > 💡 Atomicity between A and B means that either both succeed or neither do.
+
 
 **Example 1 ✈️**
 
@@ -423,17 +424,38 @@ Step 4: Marks it as sent
 4. **Search Service** is subscribed to this event topic/queue.
 5. On receiving the message, **Search Service updates its cache** to reflect the new flight time.
 
-**✅ Pros**
+### There are alternatives to it 
 
-- Guaranteed delivery, even if RabbitMQ is temporarily down
-- Atomicity between DB update and event generation
-- Services remain decoupled and async
+Those solve the **same core problem**
 
-**⚠️ Cons**
+### CDC (Change Data Capture)
 
-- More complexity (need workers, DB polling, etc.)
-- You must clean up the Outbox table regularly
-- Need retry, deduplication, and error handling logic
+**CDC** Idea - You **already write** to the database, why not **listen to DB changes** directly instead of writing an outbox table?
+
+> 💡 WAL (Write-ahead-log) is an **append-only log** where a database records every change **before** it is applied to actual data, so changes can be recovered or replicated.
+
+You need separate software for this to work, like `Debezium` for postgres
+
+```
+App → Postgres (write)
+Postgres → WAL
+Debezium → reads WAL
+Debezium → publishes event
+```
+
+### Event sourcing
+
+**Event Sourcing** is not just an alternative implementation, it is an **alternative architecture**
+
+- Instead of saving the current **state**(e.g., "Balance = $500"),
+- You save **every event** that led to that state (e.g., "Deposit $200", "Withdraw $50", etc).
+
+Very hard to do, maintain. New event versions must support old event versions.
+
+## Listen to yourself
+
+This is basically no outbox strategy at all.  
+Write DB, then send event. **Event might be lost !** if system crashes midway
 
 ## Transactional inbox
 
@@ -464,34 +486,6 @@ Scenario without inbox (problem):
 
 RabbitMQ did its job: it prevented message loss.
 But you still got **duplicate business execution**
-
-## Event Sourcing
-
-Instead of saving the current **state** of something (e.g., "Balance = $500"),
-You save **every event** that led to that state (e.g., "Deposit $200", "Withdraw $50", etc).
-
-You reconstruct the current state by replaying all events in order.
-
-**✅ Pros:**
-
-- **Time travel:** You can recreate state at any point in time
-- **Auditability:** You get a full history of what happened, when, and why
-- **Replayability:** Useful for debugging, rebuilding read models, etc
-- **Flexibility:** If your business logic changes, just replay events using the new logic
-
-**⚠️ Cons:**
-
-- **More complex:** Additional logic is needed to replay events and project current state.
-- **More data to store:** You keep every event ever (which can grow big).
-- **Needs event versioning:** If event structure changes over time, you must support old formats.
-
-**Tools for NodeJS:**
-
-- eventstore – general-purpose event sourcing lib (simple API)
-- cqrs-domain – combines CQRS + event sourcing
-- nestjs/cqrs
-
-> 💡 **CQRS** Command Query Responsibility Segregation.
 
 ## CQRS
 
@@ -915,3 +909,84 @@ A **Circuit Breaker** is a software mechanism that detects failures, counts them
 - **Closed State**: No problem
 - **Open State**: Problem. Number of errors exceeds a certain threshold within a set time period
 - **Half-Open State**: After the "cooldown" time checks a resource health on a limited amount of requests then switches to either close or open again.
+
+## Types of consistency
+
+**Consistency models** - what a client can expect to see after reads and writes in a distributed system.
+
+- **Strong consistency** - After a write completes, all reads see the latest value.  
+Slower, correctness prioritized.  
+Example: Banking apps, hotel booking
+
+- **Eventual consistency** - After a write, reads may see old data, but eventually all nodes converge.  
+Faster responses, temporary inconsistency allowed.
+Example: social media likes  
+
+- **Weak consistency** - No guarantees about **when / if** your read will reflect the latest write
+Example: logs, metrics, logs
+
+- **Read-your-own-writes** - Client always sees it's own writes while others not yet.
+Example: user updates facebook profile info and sees it, his friends currently not.
+
+- **Monotonic reads** - Once a client has seen a value, it will never see an older value.
+Example: you've seen 10 messages in a chat, next read must be >=10 messages, not 5.
+
+- **Casual consistency** - Cause and effect relationships are preserved
+Example: your friend commented on your facebook post, you replied. Noone should see a reply without your his message first
+
+## Rollout strategies
+
+This is about how you introduce changes into a **already running system**.  
+Git workflow is the one we see on a daily basis
+
+- **All-at-once** - huyak huyak i v prod. Srazu
+
+- **Rolling update** - Say you have 5 servers, update them gradually 1 by 1.  
+No downtime + can stop rollout at any time
+
+- **Blue / Green** - Blue - old version, Green - new version. Both run at the same time, you switch the traffic instantly back and forth on a load 
+balancer level.
+
+- **Canary** release - 1% of traffic, 5% of traffic, and then 100% eventually. Roll back if errors on some percentage.
+
+- **Feature flags** - Hide new features with conditions in the code. If error, change condition to false, on the next request this logic is hidden. No redeploys.
+
+- **Shadow traffic** - Production traffic duplicated from old `/v1` into `/v2` for our observation only. User does not see responses from `/v2`
+
+- **A/B testing** - Split users by experiment. Say we have old and new search algorighm. Give 50% users the old one, 50% users the new one and observe metrics.
+
+## Rate limiting
+
+**Rate limiting** controls how much load a system accepts so it doesn’t collapse
+
+Limits two things:
+- How many requests per time (rate)
+- How many requests at the same time
+
+- **Fixed window** - Allow X requests **per minute** max. Counter changes every minute.  
+Unfair, have bursts at window edges.
+
+- **Sliding window** - Allow X requests to happen in the **last 60 sec** at any moment.
+Fairer distribution, no bursts
+
+- **Token bucket** (Super popular) - We have a bucket with tokens, those tokens refils at a constant rate, each request consumes 1 token.  
+Lets say we refil **10 tokens per second**, bucket **capacity is 50 tokens**
+
+... dont understand how it differs from leaky, dont understand how it supports bursts, is there a separate rule for bursts ?
+
+- **Leaky bucket** - we have a queue of requests. Those requests "leak-out" at a constant time.  
+Leak rate: **10 RPS**, requests come in, we fill the queue. If the queue is full, then drop requests.
+
+- **Semaphore** (Concurrency limit, NOT exactly a rate limiting) - limits not per second, not per minute, but **at the same time**.  
+Max concurrent DB queries = 10, so if a new 11th arrives it must wait or fail.
+
+## Protecting from third party errors
+
+1. **Timeouts** (Always) - no request without timeout.
+2. **Fail test** - if service is down, stop retying immediately
+3. **Retries** - (Service is mostly healthy) so makes sense to retry
+4. **Circuit breaker** - (Service is most certanly unhealthy) - Stop to retry, give the system time to recover.  
+Protects system from repeated failures and retry-storms.
+5. **Fallbacks** - cached data, try later etc.
+
+

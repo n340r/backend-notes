@@ -4,16 +4,41 @@
 - Далее с чатом гпт читаю "go roadmap" roadmap.sh
 - Смотрю собесы красавчика, выписываю все что не понимаю, спрашиваю гпт.
 
+# Уточнения к базовым вопросам красавчика
+
+- What are `/internal`, `/pkg`, `cmd` ? Which one is setup, wiring ? Which one is main business logic: handlers, services, interfaces, adapters, repo ?  
+- What are the import rules for stuff inside `/internal` ?
+    - Can/should you import `/internal/user/service` from `/internal/user/repo` ?
+    - Can/should you import `/internal/one` from `/internal/two` ?
+    - Can/should you import `/internal/one` from `/pkg` ?
+    - Can/should you import `/internal/one` from `/cmd` ?
+- What exactly is `init()` where does it run and how many times ?
+- Are Both `sync.Map` and `context` type safe ? 
+- What is `checksum` ?
+- Basic auth methods and ways to handle security problems they produce.
+    - CSRF for cookies 
+    - XSS for JWT tokens
+- `Distributed transaction` (protect correctness or distributed actions and rollback correctly in case of a fail)
+- `distributed lock` (who can act now)
+- What is the difference between the two above ?  
+Easy real-world example: lets say 10 users come and want to book 1 last room.  
+How does the system behave in this case ?  
+What part of this behavior is distributed transaction and which one is distributed lock?
+
+
+
 # Вопросы с собесов (могут перекликаться с тем что есть у красавчика)
 
 Questions from interviews (may contain duplicates from krasavchik)
 
 - var wg sync.WaitGroup - что такое wait group ? Зачем нужны wg.Add(), wg.Done(), wg.Wait()
 - Clean architecture / Hexagonal architecture. Are they the same ?
+    - Handler - ?
     - Services - ?
-    - Repository - ?
+    - Interface (Port) -> 
     - Adapter - ?
-    - Port (Interface) 
+    - Repository - ?
+- Layer of architecture - logical grouping with dependency direction
 - Kafka: Topics, Partitions, Consumers, Consumer groups. Where is logic handled ? Consumer side ? Producer side ? Kafka itself ? What is idempotent producer ?
 - Transactional outbox / Transactional inbox
 - Clouds / DevOPS terms, other DBs and Queues on a high level: EventBridge, SQS, NATS, DynamoDB, BigQuery, Memcached, Cassandra, Terraform, Lambda and Edge-functions
@@ -41,7 +66,7 @@ Questions from interviews (may contain duplicates from krasavchik)
     (Fact) goroutines start with 2kb, grow 250mb(32bit), 1GB(64bit)
 - Mutex vs Atomic. Which one is better ? Can we compare them ?
 - Why does error interface in go often contains a pointer to an underlying error value ? Why not just return the struct instead of pointer to it ?
-- What is IPC ? Can threads and processes share memory and access each other’s variables ? Where do threads run ? Can I open file in one thread and pass the handler to another ? Does it apply to system threads or go routines ?
+- What is IPC ? Can threads and processes share memory and access each other’s variables ? Where do threads run ?Can I open file in one thread and pass the handler to another ? Does it apply to system threads or go routines ?
 - Synchronisation objects in go. Channels, Mutex, WaitGroup, Atomic. How would you download files in parallel and count how many finished, what wi.l be used for it - is Mutex needed in this case ?
 - (Under the hood question) What is the difference between cooperative and preemptive scheduling ? How does modern go operate ?
 - Error handling in Go.
@@ -77,8 +102,9 @@ Questions from interviews (may contain duplicates from krasavchik)
     1. High level code depends on lower level code, never vice-versa. Keep domain with types only
     2. Types are low-level, behaviour is high level
     3. Interfaces are on the consumer side. A service is the consumer of a port/interface, and adapters are plugged in to satisfy that port.
-    4. If packages need each other - extract to a shared one 5. God package everyone imports - bad
-- OOP in go. 
+    4. If packages need each other - extract to a shared one
+    5. God package everyone imports - bad
+- OOP in go.
     - Does go have a special constructor ?
     - Does go have private/public ?
     - How do you define getters for private fields ?
