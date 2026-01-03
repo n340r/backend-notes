@@ -1,10 +1,15 @@
-# Usefull things
+# Как я изучал Go
 
-- Официальный "a tour of go" (оч примерно с трети, идиотские запутанные математические примеры, но советую прорваться через него)
-- Далее с чатом гпт читаю "go roadmap" roadmap.sh
-- Смотрю собесы красавчика, выписываю все что не понимаю, спрашиваю гпт.
+- Официальный [a tour of go](https://go.dev/tour/welcome/1) 
+(плохие примеры примерно с трети, идиотские запутанные математические примеры, но советую прорваться через него в любом случае)
 
-# Уточнения к базовым вопросам красавчика
+- Далее с чатом гпт читаю [go roadmap](https://roadmap.sh/golang)
+
+- Смотрю базу красавчика:
+    - Базовые вопросы
+    - Интересные техсобесы, выписываю вопросы с них
+
+## Уточнения к базовым вопросам красавчика
 
 - What are `/internal`, `/pkg`, `cmd` ? Which one is setup, wiring ? Which one is main business logic: handlers, services, interfaces, adapters, repo ?  
 - What are the import rules for stuff inside `/internal` ?
@@ -25,11 +30,9 @@ Easy real-world example: lets say 10 users come and want to book 1 last room.
 How does the system behave in this case ?  
 What part of this behavior is distributed transaction and which one is distributed lock?
 
+## Вопросы с собесов красавчика 
 
-
-# Вопросы с собесов (могут перекликаться с тем что есть у красавчика)
-
-Questions from interviews (may contain duplicates from krasavchik)
+Questions from interviews *(may contain duplicates with basic questions)*
 
 - var wg sync.WaitGroup - что такое wait group ? Зачем нужны wg.Add(), wg.Done(), wg.Wait()
 - Clean architecture / Hexagonal architecture. Are they the same ?
