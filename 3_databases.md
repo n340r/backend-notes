@@ -1332,9 +1332,42 @@ SET join_collapse_limit = 1; -- Forces planner to keep join order as written
 SET from_collapse_limit = 1; -- Prevents flattening of subqueries
 ```
 
-## Query optimization
+## 📈 Query optimization
 
-### 1. Changing the SQL Query Itself.
+### MVCC
+
+> 💡 MVCC - Multi-Version Concurrency Control
+
+- Rows are **never updated in place**
+- Update = new version, **old version kept**
+- Readers don’t block writers, Writers don’t block readers
+
+This enables:
+
+- Non-blocking reads
+- Snapshot isolation
+
+### Vacuum, Analyze, Autovacuum
+
+**Vacuum**
+
+- Removes dead tuples
+- Prevents table bloat
+- Frees space for reuse (not OS)
+
+**Analyze**
+
+- Updates statistics
+- Used by query planner
+
+**Autovacuum**
+
+- Runs **both automatically**
+- Critical for Postgres health
+
+They’re grouped because: Vacuum **cleans**, Analyze **informs planner**
+
+### 1. Change the SQL Query Itself.
 
 - Avoid unnecessary subqueries or joins.
 - Use `LIMIT`, `EXISTS`
