@@ -80,6 +80,7 @@ ORDER BY tweet_bucket;
 
 - What is `UNION`, `UNION ALL` ? Can you give me an example ?
 - What is the difference between `WHERE` and `HAVING` ?
+  Can we do `WHERE COUNT(*) > 10` in SQL ?
 - Difference between `SERIAL` and `uuid`. Which one is better for sharding ?  
   Is `UUID v4` better than `UUID v7` and why ?
 - Can you referency by **non-primary** key ?
