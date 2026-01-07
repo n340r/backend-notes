@@ -20,12 +20,12 @@ In relational databases, **strict relationships** enforce _referential integrity
 
 ### Shorthands used in PostgreSQL world
 
-| Аббревиатура | Название                     | Пример           | Что делает              |
-| ------------ | ---------------------------- | ---------------- | ----------------------- |
-| **DML**      | Data Manipulation Language   | INSERT, UPDATE   | Changed data            |
-| **DDL**      | Data Definition Language     | CREATE, DROP     | Changes the structure   |
-| **DCL**      | Data Control Language        | GRANT, REVOKE    | Changes rights          |
-| **TCL**      | Transaction Control Language | COMMIT, ROLLBACK | Manages transactions    |
+| Аббревиатура | Название                     | Пример           | Что делает            |
+| ------------ | ---------------------------- | ---------------- | --------------------- |
+| **DML**      | Data Manipulation Language   | INSERT, UPDATE   | Changed data          |
+| **DDL**      | Data Definition Language     | CREATE, DROP     | Changes the structure |
+| **DCL**      | Data Control Language        | GRANT, REVOKE    | Changes rights        |
+| **TCL**      | Transaction Control Language | COMMIT, ROLLBACK | Manages transactions  |
 
 ## NoSQL (Not Only SQL)
 
@@ -55,10 +55,12 @@ In relational databases, **strict relationships** enforce _referential integrity
 ## Scaling
 
 **Vertical Scaling (Scaling Up)**:
+
 - Add more resources (CPU, RAM, SSD) to a single server.
 - Simple to implement, limited by hardware capacity — eventually hits a ceiling.
 
 **Horizontal Scaling (Scaling Out)**:
+
 - Add more servers and distribute the data/workload.
 - More complex but allows for much higher scalability.
 
@@ -129,8 +131,8 @@ The two main approaches are **Sharding** and **Replication**.
 - PostgreSQL works well with vertical scaling.
 - But you can only scale a single machine so far.
 
-
 **PG Horizontal Scaling**
+
 - PostgreSQL **does not** support automatic sharding out of the box !
 - Sharding is usually implemented via **extensions** (e.g., `Citus`).
 - Other config on application level is required when **sharding** PG:
@@ -139,7 +141,7 @@ The two main approaches are **Sharding** and **Replication**.
 
 **PG Replication**
 
-- *Replication* = copy of the primary database to one or more read-only replicas.
+- _Replication_ = copy of the primary database to one or more read-only replicas.
 - Great for read-heavy applications.
 - Application must route **read queries** to replicas and **write queries** to the primary.
 - `primary_conninfo` on a replica shows where the master is
@@ -163,14 +165,15 @@ The two main approaches are **Sharding** and **Replication**.
 - Shard key can be a **composite key** (multiple fields). This is often used
 
 **Mongo Replication**
+
 - MongoDB uses **replica sets** (1 Primary + N Secondary nodes).
 - If Primary fails:
   - Secondaries hold an **election**.
   - Consider: node priority, latest data, MongoDB version.
   - **Quorum-based voting** elects the new Primary.
-- Sharding and replication are configured through MongoDB's built-in tooling (`mongod`, `mongos`, `mongo/mongosh` shell commands, and replica set configuration commands); 
+- Sharding and replication are configured through MongoDB's built-in tooling (`mongod`, `mongos`, `mongo/mongosh` shell commands, and replica set configuration commands);
 
-## Summary about scaling 
+## Summary about scaling
 
 | Feature                      | PostgreSQL                   | MongoDB                    |
 | ---------------------------- | ---------------------------- | -------------------------- |
@@ -288,17 +291,19 @@ MongoDB (same idea via pipeline starting from `users`):
 ```js
 db.users.aggregate([
   { $match: { active: true } },
-  { $lookup: {
+  {
+    $lookup: {
       from: "orders",
       localField: "_id",
       foreignField: "user_id",
-      as: "orders"
-  }},
+      as: "orders",
+    },
+  },
   { $addFields: { ordersCount: { $size: "$orders" } } },
   { $match: { ordersCount: { $gt: 0 } } },
   { $project: { orders: 0 } },
   { $sort: { ordersCount: -1 } },
-  { $limit: 5 }
+  { $limit: 5 },
 ]);
 ```
 
@@ -310,16 +315,18 @@ ORM provides an abstraction layer over the database, allowing us to interact wit
 You define models, those map to database tables, and then these models are used to perform DB operations.
 
 **✅ Pros:**
+
 - **Abstraction**: Hides complex SQL queries, allowing you to work with database entities as objects.
 - **Productivity**: Speeds up development with less boilerplate code.
 - **Security**: Helps prevent SQL injection attacks by sanitizing inputs.
 - **Maintainability**: Easier to refactor and maintain code, especially in large projects.
--   **Database Agnostic (to some extent)**: Many ORMs support multiple database systems, allowing easier switching.
+- **Database Agnostic (to some extent)**: Many ORMs support multiple database systems, allowing easier switching.
 
 **🔴 Cons:**
+
 - **Performance Overhead**: Can generate slower queries for complex operations, leading to n+1 query issues.
 - **Limited SQL Control**: Hard to predict which SQL will be executed
-- **ORM magic***: Has it's own context, cache and so on.
+- **ORM magic\***: Has it's own context, cache and so on.
 
 **Popular Node.js ORMs for SQL Databases**
 
@@ -334,26 +341,31 @@ You define models, those map to database tables, and then these models are used 
 SQL builders offer a more programmatic way to construct SQL queries compared to writing raw SQL. One important difference is that they do not provide object mapping like an ORM; instead, they offer a fluent API to build queries, allowing for greater control over the generated SQL.
 
 **✅ Pros:**
+
 - **Control**: Offers more control over the generated SQL compared to ORMs.
 - **Flexibility**: Easier to write complex or database-specific queries that might be cumbersome in an ORM.
 - **Readability**: Programmatic construction of queries can be more readable than concatenated raw SQL strings.
 - **Security**: Helps prevent SQL injection through parameter binding.
 
 **Popular Node.js SQL Builders:**
+
 - `pgtyped`: Generates types from SQL queries for type-safe raw SQL with PostgreSQL.
 - `Kysely`
 - `Knex.js`
 
 ### Raw Inline SQL
+
 Raw inline SQL involves writing and executing SQL queries directly as strings in your application code.  
-At least an SQL builder is used nowdays. 
+At least an SQL builder is used nowdays.
 
 **✅ Pros**
+
 - **Full Control** – Direct access to all SQL features and optimizations.
 - **Performance** – No abstraction overhead.
 - **Simplicity** – Convenient for small, straightforward queries.
 
 **🔴 Cons:**
+
 - **Security**– Must use parameterized queries to avoid SQL injection.
 - **Maintainability** – Harder to refactor and debug in large codebases.
 - **Vendor Lock-In** – Queries tightly coupled to one SQL dialect.
@@ -398,8 +410,8 @@ CREATE TABLE student_courses (
 
 ## Relationships: PostgreSQL vs MongoDB
 
-> 💡 TLDR: `PostgreSQL` ensures links with *FKs*; `MongoDB` models links with 
-embedded docs or stored `_id` references and resolves them via `$lookup` or separate queries.
+> 💡 TLDR: `PostgreSQL` ensures links with _FKs_; `MongoDB` models links with
+> embedded docs or stored `_id` references and resolves them via `$lookup` or separate queries.
 
 ### PostgreSQL (foreign keys + joins)
 
@@ -416,10 +428,12 @@ embedded docs or stored `_id` references and resolves them via `$lookup` or sepa
 - You can join at read time with **`$lookup`** in an aggregation pipeline.
 
 **When to embed**
+
 - One-to-few, data is **read together** most of the time.
 - Data **changes together**; keep a single write (atomic per document).
 
 **When to reference**
+
 - One-to-many with **unbounded growth** (`comments`, `events`, `logs`).
 - Many-to-many (`users ↔ roles`, `products ↔ categories`).
 - The same child is shared by many parents (avoid duplication).
@@ -534,7 +548,7 @@ Here composite key --> (StudentID, Course)
 | JOIN Type    | Concept        | What It Does                                                                   |
 | ------------ | -------------- | ------------------------------------------------------------------------------ |
 | `INNER JOIN` | 🔍 Filter      | Returns **only rows that have matching values in both tables**                 |
-| `LEFT JOIN`           | ➕ Expansion   | Returns **all rows from the left table**, and matching rows from the right     |
+| `LEFT JOIN`  | ➕ Expansion   | Returns **all rows from the left table**, and matching rows from the right     |
 | `RIGHT JOIN` | ➕ Expansion   | Returns **all rows from the right table**, and matching rows from the left     |
 | `FULL JOIN`  | 🌀 Combination | Returns **all rows when there is a match in one of the tables**, left or right |
 | `CROSS JOIN` | 🔁 Cartesian   | Returns **all possible combinations** of rows from both tables                 |
@@ -906,7 +920,7 @@ The **text you're editing** is the **data**.
 
 ---
 
-###  1️⃣ Read Uncommitted (🚫 Not actually used in PostgreSQL)
+### 1️⃣ Read Uncommitted (🚫 Not actually used in PostgreSQL)
 
 **Google Docs analogy**:  
 You're watching another user type in real time—even if they haven't saved their changes yet.
@@ -989,7 +1003,7 @@ Like **Repeatable Read** + others are not allowed to edit at all
 
 > Default isolation level in PG is `READ COMMITED`
 
-> Isolation levels can be configured *per-query*, *per-session*
+> Isolation levels can be configured _per-query_, _per-session_
 
 ## 🔒 Locks in PostgreSQL
 
@@ -999,7 +1013,7 @@ Think **edit access** rules in Google Docs.
 
 ### Types of Locks
 
-Locks differ by their *behaviour* and *scale*
+Locks differ by their _behaviour_ and _scale_
 
 ### 📏 Different types of lock scale
 
@@ -1039,7 +1053,7 @@ If yes, you get a **conflict warning**.
 
 Two or more transactions mutually block each other.  
 PostgreSQL automatically detects deadlocks and aborts one of the transactions.  
-Throws an error that should be handled by the application.  
+Throws an error that should be handled by the application.
 
 ## 📚 Indexes in Databases (PostgreSQL + MongoDB)
 
@@ -1078,9 +1092,9 @@ With an index:
 
 > 💡 **JSONB** — a special PostgreSQL data type that stores JSON in binary form, allowing efficient search, filtering, and indexing without requiring a fixed schema.
 
-> 💡 **B-tree** is a *balanced* tree, NOT binary tree. Complexity of search through it is `O(log N)`
+> 💡 **B-tree** is a _balanced_ tree, NOT binary tree. Complexity of search through it is `O(log N)`
 
-> 💡 Index does not make sense with **low-cardinality** such as sex male / female where each value still matches ~50% of table. Index helps when you skip large portion of rows. 
+> 💡 Index does not make sense with **low-cardinality** such as sex male / female where each value still matches ~50% of table. Index helps when you skip large portion of rows.
 
 ### 🔧 How to Create Indexes
 
@@ -1142,12 +1156,13 @@ SELECT * FROM users WHERE LOWER(email) = 'example@mail.com';
 
 5️⃣ **Partial Index**
 
+Use for queries on a **subset** of data. Saves space + **improves write performance**.
+
 ```sql
 CREATE INDEX idx_large_orders ON orders (total_amount) WHERE total_amount > 1000;
 ```
 
 Reduces overhead for less-used rows.
-Use for queries on a subset of data. Saves space + **improves write performance**.
 
 ### ⏳ Locking and Index Creation in PostgreSQL
 
@@ -1189,6 +1204,7 @@ db.orders.createIndex({ status: 1, totalAmount: -1 });
 ## PostgreSQL Join strageties
 
 `PostgreSQL` uses different join algorithms depending on
+
 - table size
 - indexes
 - cost estimation.
@@ -1198,6 +1214,7 @@ We need to be aware of those to debug out why some *JOIN*s suddenly become slow.
 ### 🔹 1. Nested Loop Join
 
 Good when:
+
 - Left table = small (e.g., 5 rows)
 - Right table = large but indexed
 
@@ -1207,20 +1224,22 @@ You have a **short guest list** → for each name you look up their **phone numb
 ### 🔹 2. Hash Join
 
 Good when:
-- Both tables *are large*
+
+- Both tables _are large_
 - No usable index
 - Equality join `=`
 
 **Real-life analogy**
-You need to join "payments" table, each payment with `order_id` and orders table like so ```sql ... payment.order_id = order.id```
+You need to join "payments" table, each payment with `order_id` and orders table like so `sql ... payment.order_id = order.id`
 
 ### 🔹 3. Merge Join
 
 Good when:
+
 - Two sorted tables
 - Not yet sorted but sorting is cheap
 
-**Real-life analogy** 
+**Real-life analogy**
 Two sorted customer lists → you run through each once, aligning matches.
 
 ## Planner
@@ -1424,25 +1443,33 @@ EXECUTE FUNCTION notify_change();
 
 **Temporary Triggers** work until the end of session. Useful for debugging.
 
-
 ## EXPLAIN ANALYZE
-
-This command shows:
-- Actual time of each step of a plan
-- Actual rows that has been handled
-- Number of loops
-
-> 💡 So it is a tree of steps that can be analyzed to find a bottleneck
-
-## 💥 `EXPLAIN ANALYZE DROP DATABASE postgres`?
 
 | Command           | What It Does                                                 |
 | ----------------- | ------------------------------------------------------------ |
 | `EXPLAIN`         | Shows the **execution plan** without running the query.      |
 | `EXPLAIN ANALYZE` | **Executes** the query and shows actual performance metrics. |
 
+This command shows:
 
-> `**Seq Scan**` (Sequential Scan) in `EXPLAIN` output means the database reads **every row** of the table to find matches. This is efficient for small tables or when a large percentage of rows are needed. Almost always means room for optimization when seen on large tables.
+- Actual time of each step of a plan
+- Actual rows that has been handled
+- Number of loops
+
+> 💡 So it is a tree of steps that can be analyzed to find a bottleneck
+
+### 🚩 Common red flags to look for
+
+> `**Seq Scan**` (Sequential Scan) in `EXPLAIN` means db searches **every row** of the table. Right choise for small tables, **almost always** means room for optimization otherwise
+
+- sequential scan
+- Huge difference between **estimated** vs actual rows
+- **Nested Loop** with large datasets
+- Seq Scan on large table with selective condition
+- High cost + long actual time
+- **Missing index** on join condition
+
+## 💥 `EXPLAIN ANALYZE DROP DATABASE postgres`?
 
 So it drops the database and shows you the time it took to do it
 
@@ -1462,7 +1489,7 @@ This is bad and results in performance issues.
 **Way to fix it**
 Use JOIN + aggregate (`JOIN`, `GROUP BY`) to fetch everything in one query.
 
-## Extra notes on lock types 
+## Extra notes on lock types
 
 > 💡 `SHARE` in case of DB means read as long as you are not writing.
 
