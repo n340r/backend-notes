@@ -86,10 +86,10 @@ Protobuf in practice:
 - Implement client in code
 
 **Important note on .proto**
+
 - `.proto` file defines a strict schema
 - Must live in a shared repo or central registry
 - Client code should be auto-generated, not handwritten
-
 
 **.proto file**:
 
@@ -138,20 +138,20 @@ Booking response sent back
 
 ### 🛡️ Why gRPC is internal-only
 
-- Uses *binary format* (hard for browsers to consume)
-- No *CORS*, *caching*, *auth* or *versioning* built-in
+- Uses _binary format_ (hard for browsers to consume)
+- No _CORS_, _caching_, _auth_ or _versioning_ built-in
 - Technically possible to expose externally (via gRPC-Web, Envoy), but **bad practice**
 
 ## Interaction between microservices
 
-1. Synchronous call via *HTTP*.
-(*Simple*, but results in *tight compling*.)
+1. Synchronous call via _HTTP_.
+   (_Simple_, but results in _tight compling_.)
 
-2. *Message queue* (e.g., `RabbitMQ`, `Kafka`).  
-(Almost always preferred nowdays. *Loose coupling*, but *eventual consistency*)
+2. _Message queue_ (e.g., `RabbitMQ`, `Kafka`).  
+   (Almost always preferred nowdays. _Loose coupling_, but _eventual consistency_)
 
-3. *gRPC*
-(*Fastest*, uses `HTTP2`, but requieres setup and strict `.proto` schema)
+3. _gRPC_
+   (_Fastest_, uses `HTTP2`, but requieres setup and strict `.proto` schema)
 
 ## Security in MSA
 
@@ -242,21 +242,22 @@ BFF or Microservices
 One of the most fundamental concepts in distributed systems (like MSA).  
 Distributed system can only **guarantee two of three** things at the same time:
 
-| Term                | What it means (simple)                                                 |  
+| Term                   | What it means (simple)                                               |
 | ---------------------- | -------------------------------------------------------------------- |
 | ✅ Consistency         | All nodes **see the same data** at the same time.                    |
 | ✅ Availability        | The system **always responds**, even if it’s not the freshest data.  |
 | ✅ Partition Tolerance | The system **still works** even if one server can’t talk to another. |
 
-You need **Partition tolerance** anyway, so you choose between **C**, **A**.
+You need **Partition tolerance** in MSA anyway, so you choose between **C**, **A**.
 
-> 💡 Network partition in this case is **flaky connection** type of situation. We are not talking *no internet* at all or *airplane mode* 
+> 💡 Network partition in this case is **flaky connection** type of situation. We are not talking _no internet_ at all or _airplane mode_
 
 **Examples**
 
-- **PostgreSQL** - 100% **CP** because when network partition happens, we prioritise data consistency. Better fail than risk 
-inconsistent results (multiple users book same room, triple payment withdrawal)
+- **PostgreSQL** - 100% **CP** because when network partition happens, we prioritise data consistency. Better fail than risk inconsistent results (multiple users book same room, triple payment withdrawal)
 - **Group chat** - **CA** because it is better to get messages out of order / duplicates than just freeze UI
+- **Redis** - CP
+- **Cassandra** - AP (always available)
 
 ## Distributed Transactions and Saga
 
@@ -372,7 +373,7 @@ amqp.connect("amqp://localhost", (error0, connection) => {
 
 **Example:**
 `FlightService` -- displays flight info to the frontend.  
-`ScheduleService` -- keeps the flight schedule up to date.  
+`ScheduleService` -- keeps the flight schedule up to date.
 
 `ScheduleService` --(RabbitMQ)--> `FlightService`.  
 If `ScheduleService` updates local DB but the message is not sent, `FlightService` displays stale data.
@@ -399,7 +400,6 @@ Step 4: Marks it as sent
 
 > 💡 Atomicity between A and B means that either both succeed or neither do.
 
-
 **Example 1 ✈️**
 
 1. A new price is set in the **Pricing Service**.
@@ -424,7 +424,7 @@ Step 4: Marks it as sent
 4. **Search Service** is subscribed to this event topic/queue.
 5. On receiving the message, **Search Service updates its cache** to reflect the new flight time.
 
-### There are alternatives to it 
+### There are alternatives to it
 
 Those solve the **same core problem**
 
@@ -462,6 +462,7 @@ Write DB, then send event. **Event might be lost !** if system crashes midway
 The goal of it is don't run the **business logic twice** on the same message
 
 When consuming a message:
+
 - Start DB transaction
 - Check if `message_id` already exists in `inbox` table
 - If yes → skip processing
@@ -605,7 +606,7 @@ class Order {
   }
 
   addItem(item) {
-    this.items.push(item); 
+    this.items.push(item);
   }
 }
 ```
@@ -613,10 +614,10 @@ class Order {
 - Has **It's own id**
 - A cluster of entities/value objects that are treated as a unit.
 - Has a **single root** (aggregate root) that controls access.  
-`const order = new Order();`
+  `const order = new Order();`
 - All changes must go through the root to maintain **data integrity**.  
-`order.addItem(item);` - correct  
-`order.items.push(item)` - incorrect. Outside the aggregate
+  `order.addItem(item);` - correct  
+  `order.items.push(item)` - incorrect. Outside the aggregate
 
 4. **Repositories**
 
@@ -627,10 +628,7 @@ class Order {
 ```ts
 // suppose we have a User aggregate
 export class User {
-  constructor(
-    public readonly id: string,
-    public email: string,
-  ) {}
+  constructor(public readonly id: string, public email: string) {}
 
   changeEmail(newEmail: string) {
     this.email = newEmail;
@@ -652,10 +650,7 @@ export interface UserRepository {
 ```ts
 // User aggregate
 export class User {
-  constructor(
-    public readonly id: string,
-    public email: string,
-  ) {}
+  constructor(public readonly id: string, public email: string) {}
 
   // belongs to User aggregate
   changeEmail(newEmail: string) {
@@ -677,12 +672,12 @@ export interface TokenService {
   issueToken(payload: { userId: string }): string;
 }
 
-// Authentication domain service 
+// Authentication domain service
 export class AuthenticationService {
   constructor(
     private readonly users: UserRepository,
     private readonly hasher: PasswordHasher,
-    private readonly tokens: TokenService,
+    private readonly tokens: TokenService
   ) {}
 
   // Does a lot of things: user, hash, tokens, etc. Does not fit inth User aggregate
@@ -715,7 +710,7 @@ class UserRegisteredEvent {
 7. **Bounded Contexts**
 
 - A **boundary around a part of the system** where terms, logic, and models have a specific meaning
-- Booking context, Pricing context etc. 
+- Booking context, Pricing context etc.
 - Microserivces **often map 1:1 to bounded context** but DDD does not enforce microservices.
 
 > 🚧 Models/terms inside one context don’t leak into another.
@@ -736,19 +731,20 @@ class UserRegisteredEvent {
 
 **What it is (beginner view)**
 
-- 📣 Services communicate by emitting events: *"Something happened"* → others react.
-- Instead of direct calls like "do X now", a service says *what happened* and moves on.
-- Example: `OrderCreated` event that **Payment** and *Notification* services pick up.
-- Ways to make EDD : *WebHooks*, *Queues*
+- 📣 Services communicate by emitting events: _"Something happened"_ → others react.
+- Instead of direct calls like "do X now", a service says _what happened_ and moves on.
+- Example: `OrderCreated` event that **Payment** and _Notification_ services pick up.
+- Ways to make EDD : _WebHooks_, _Queues_
 
 **Core pieces (🧩)**
+
 ```bash
 Product--(Event)--[Broker]--(Event)-->Consumer
 ```
 
 ### Pub / Sub (Publish / Subscribe)
 
-*One* event → delivered to *all interested subscribers*.
+_One_ event → delivered to _all interested subscribers_.
 
 ```css
 [Order Service]  ──▶  [Broker: "order.created" topic]
@@ -759,7 +755,7 @@ Product--(Event)--[Broker]--(Event)-->Consumer
 
 ### Work Queue (Competing Consumers)
 
-*One* task message → handled by *exactly one worker*.
+_One_ task message → handled by _exactly one worker_.
 
 ```css
 [Order Processor] ─▶ [Broker: "order.tasks" queue]
@@ -769,6 +765,7 @@ Product--(Event)--[Broker]--(Event)-->Consumer
 ```
 
 ### Pros and Cons
+
 - ✅ Decouple teams/services; reduce tight, synchronous dependencies.
 - ✅ Fan‑out work (notify many services)
 - ✅ Smooth spikes (buffer in broker).
@@ -915,24 +912,24 @@ A **Circuit Breaker** is a software mechanism that detects failures, counts them
 **Consistency models** - what a client can expect to see after reads and writes in a distributed system.
 
 - **Strong consistency** - After a write completes, all reads see the latest value.  
-Slower, correctness prioritized.  
-Example: Banking apps, hotel booking
+  Slower, correctness prioritized.  
+  Example: Banking apps, hotel booking
 
 - **Eventual consistency** - After a write, reads may see old data, but eventually all nodes converge.  
-Faster responses, temporary inconsistency allowed.
-Example: social media likes  
+  Faster responses, temporary inconsistency allowed.
+  Example: social media likes
 
 - **Weak consistency** - No guarantees about **when / if** your read will reflect the latest write
-Example: logs, metrics, logs
+  Example: logs, metrics, logs
 
 - **Read-your-own-writes** - Client always sees it's own writes while others not yet.
-Example: user updates facebook profile info and sees it, his friends currently not.
+  Example: user updates facebook profile info and sees it, his friends currently not.
 
 - **Monotonic reads** - Once a client has seen a value, it will never see an older value.
-Example: you've seen 10 messages in a chat, next read must be >=10 messages, not 5.
+  Example: you've seen 10 messages in a chat, next read must be >=10 messages, not 5.
 
 - **Casual consistency** - Cause and effect relationships are preserved
-Example: your friend commented on your facebook post, you replied. Noone should see a reply without your his message first
+  Example: your friend commented on your facebook post, you replied. Noone should see a reply without your his message first
 
 ## Rollout strategies
 
@@ -942,10 +939,10 @@ Git workflow is the one we see on a daily basis
 - **All-at-once** - huyak huyak i v prod. Srazu
 
 - **Rolling update** - Say you have 5 servers, update them gradually 1 by 1.  
-No downtime + can stop rollout at any time
+  No downtime + can stop rollout at any time
 
-- **Blue / Green** - Blue - old version, Green - new version. Both run at the same time, you switch the traffic instantly back and forth on a load 
-balancer level.
+- **Blue / Green** - Blue - old version, Green - new version. Both run at the same time, you switch the traffic instantly back and forth on a load
+  balancer level.
 
 - **Canary** release - 1% of traffic, 5% of traffic, and then 100% eventually. Roll back if errors on some percentage.
 
@@ -960,25 +957,26 @@ balancer level.
 **Rate limiting** controls how much load a system accepts so it doesn’t collapse
 
 Limits two things:
+
 - How many requests per time (rate)
 - How many requests at the same time
 
 - **Fixed window** - Allow X requests **per minute** max. Counter changes every minute.  
-Unfair, have bursts at window edges.
+  Unfair, have bursts at window edges.
 
 - **Sliding window** - Allow X requests to happen in the **last 60 sec** at any moment.
-Fairer distribution, no bursts
+  Fairer distribution, no bursts
 
 - **Token bucket** (Super popular) - We have a bucket with tokens, those tokens refils at a constant rate, each request consumes 1 token.  
-Lets say we refil **10 tokens per second**, bucket **capacity is 50 tokens**
+  Lets say we refil **10 tokens per second**, bucket **capacity is 50 tokens**
 
 ... dont understand how it differs from leaky, dont understand how it supports bursts, is there a separate rule for bursts ?
 
 - **Leaky bucket** - we have a queue of requests. Those requests "leak-out" at a constant time.  
-Leak rate: **10 RPS**, requests come in, we fill the queue. If the queue is full, then drop requests.
+  Leak rate: **10 RPS**, requests come in, we fill the queue. If the queue is full, then drop requests.
 
 - **Semaphore** (Concurrency limit, NOT exactly a rate limiting) - limits not per second, not per minute, but **at the same time**.  
-Max concurrent DB queries = 10, so if a new 11th arrives it must wait or fail.
+  Max concurrent DB queries = 10, so if a new 11th arrives it must wait or fail.
 
 ## Protecting from third party errors
 
@@ -986,7 +984,5 @@ Max concurrent DB queries = 10, so if a new 11th arrives it must wait or fail.
 2. **Fail test** - if service is down, stop retying immediately
 3. **Retries** - (Service is mostly healthy) so makes sense to retry
 4. **Circuit breaker** - (Service is most certanly unhealthy) - Stop to retry, give the system time to recover.  
-Protects system from repeated failures and retry-storms.
+   Protects system from repeated failures and retry-storms.
 5. **Fallbacks** - cached data, try later etc.
-
-
