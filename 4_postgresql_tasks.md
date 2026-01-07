@@ -75,3 +75,12 @@ FROM (
 GROUP BY tweet_count
 ORDER BY tweet_bucket;
 ```
+
+## SQL bonus questions:
+
+- What is `UNION`, `UNION ALL` ? Can you give me an example ?
+- What is the difference between `WHERE` and `HAVING` ?
+- Difference between `SERIAL` and `uuid`. Which one is better for sharding ?  
+  Is `UUID v4` better than `UUID v7` and why ?
+- Can you referency by **non-primary** key ?
+- What is `selectivity`. What is `high selectivity` and `low selectivity`

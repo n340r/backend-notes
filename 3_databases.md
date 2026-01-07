@@ -848,7 +848,7 @@ Two support-agents update a user's profile at the same time. Only one change is 
 **Real-world example**:  
 An app shows a hotel as "available" because a parallel transaction marked it free—but that transaction later rolls back.
 
-**Problem**: A transaction reads data modified by another **uncommitted** transaction.
+**Problem**: A transaction reads **uncommited data** that might be rolled back midway
 
 **Why it happens**: Reading "unconfirmed" changes.
 
@@ -857,9 +857,9 @@ An app shows a hotel as "available" because a parallel transaction marked it fre
 ### 3️⃣ Non-repeatable Read
 
 **Real-world example**:  
-A library system loads a book's status → later in the same transaction, the book appears "borrowed."
+A library system checks a book's status, sees `free`, later in the same transaction check again, the book appears `borrowed`, then again, book is `free` again
 
-**Problem**: A transaction reads the same row twice, but gets different results due to another committed transaction in between.
+**Problem**: A transaction reads **different commited data** in the process
 
 **Why it happens**: Another transaction updated and committed the row mid-process.
 
@@ -1037,17 +1037,17 @@ You “lock” a paragraph so others **can’t edit it** while you’re working.
 
 ### 🧩 Optimistic Locking behaviour
 
-Hope for the best
+Optimistic locking assumes **conflicts are rare** and detects them at write time, **not by locking** data upfront.
 
 **Google Docs analogy**:  
 Everyone can edit freely. When you click save, Google checks if someone else has changed the same paragraph.  
 If yes, you get a **conflict warning**.
 
-??? is it a db feature or do we have to check something on the application level ?
+Process in a nutshell:
 
-- No locking during read
-- Conflict check before write
-- **Efficient but may rollback on conflict**
+- Do `transaction 1` on the row `WHERE id = 10 AND version = 10`, then **increment** version
+- Next `transaction 2` tries to work on the same row `WHERE id = 10 ADN version = 10` but encounters `version = 11` hence `0` rows affected.
+- App checks, if `0` rows affected - error or retry
 
 ## Deadlocks
 
@@ -1421,6 +1421,8 @@ END;
 $$;
 ```
 
+> $$ ... $$; is a pg dollar-quoting string delimiter. Everything between these $$ tokens is a single string - the procedure body.
+
 ### Call a stored procedure
 
 ```sql
@@ -1434,14 +1436,24 @@ CALL update_price(1, 100.00);
 - They **reduce portability between other DBMS** because they may not support them the same way.
 - Use them when **logic really belongs inside the database**, otherwise **prefer application-level code** for portability.
 
+## plpgsql (PL/pgSQL)
+
+**plpgsql** - procedural language PostgreSQL
+
+It isLike **SQL + IF/LOOP/variables**
+
+Used for functions, triggers, procedures
+
 ## 📚 Triggers in PostgreSQL
 
 A **Trigger** is a special database mechanism that automatically executes **before or after** specific events like `INSERT`, `UPDATE`, or `DELETE`.
 
 ### Why Use Triggers?
 
-- Perform **automatic actions** when data changes.
+- Perform **automatic actions** on `INSERT`, `UPDATE`, `DELETE`
 - Useful for **auditing**, **logging**, or **notifications**.
+
+> 💡 Should be used with caution, many teams don't use them
 
 ### 🛠️ **How Triggers Work**
 
