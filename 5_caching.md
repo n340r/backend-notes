@@ -4,14 +4,18 @@
 
 What you **need to understand** are concepts behind those names.  
 There are **two questions to answer**
+
 1. Who controls the cache ?
-  - App
-  - Cache system
+
+- App
+- Cache system
+
 2. When and how does data move between **cache** and **DB**
- - on read
- - on write
- - sync
- - async
+
+- on read
+- on write
+- sync
+- async
 
 Those names below are just **labels for common** combinations used in real-world to **simplify things**:
 
@@ -33,7 +37,7 @@ Cache for a **fixed period of time** and then expire when it pases
 
 ### (Read) Read-Through
 
-1. **Cache layer controls** the cache. 
+1. **Cache layer controls** the cache.
 2. Cache Miss -> **cache itself** does its workflow, saves things how it wants, returns result
 
 **Much less common** in simple apps, less customization
@@ -165,12 +169,14 @@ A **"pool"** is a collection of **pre-established, ready-to-use connections**.
 ## Redis: Everyday Commands
 
 - `SET`, `GET` Basic key-value storage
+
 ```
 SET user:1 "Alex"
 GET user:1 -> "Alex"
 ```
 
 - `HSET` (Hashes) Store object-like structure
+
 ```
 HSET user:1 name "Alex"
 HSET user:1 age "24"
@@ -179,6 +185,7 @@ HGET user:1 name -> "Alex"
 ```
 
 - `SETs` **unique unordered** values
+
 ```
 SADD online_users 1 2 3
 SADD online_users 2   # ignored (already exists)
@@ -186,10 +193,11 @@ SADD online_users 2   # ignored (already exists)
 SMEMBERS online_users -> {1,2,3}
 ```
 
-- `Sorted sets` Set + score
-`-1` - last elemtnt
-`-2` - second from the end
-`ZREVRANGE` - range in reverce order
+- `ZADD` - `Sorted sets` Set + score
+  `-1` - last elemtnt
+  `-2` - second from the end
+  `ZREVRANGE` - range in reverce order
+
 ```
 ZADD leaderboard 100 user1
 ZADD leaderboard 200 user2
@@ -199,12 +207,14 @@ ZREVRANGE leaderboard 0 1 - user2, user3
 ```
 
 - `Pub/Sub` Lightweight messaging
+
 ```
 SUBSCRIBE orders
 PUBLISH orders "order_created"
 ```
 
 - `WATCH` / `WATCH2` Optimistic locking. Abort if someone accesses while i'm executing
+
 ```
 WATCH balance
 GET balance
@@ -215,6 +225,7 @@ EXEC
 > 💡 Resis can be configured (though not widely used) for pub/sub. `PUBLISH channel message` / `SUBSCRIBE channel`: lightweight notifications.
 
 📌 Common patterns, examples
+
 - Cache with TTL: `SETEX user:123 60 {json}`.
 - Cache-if-absent (and simple lock): `SET lock:job abc EX 10 NX`.
 - Rolling queue: `LPUSH q item`; worker uses `BRPOP q 5`.

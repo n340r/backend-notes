@@ -3,6 +3,15 @@
 [SQL introduction lessons](https://sqlbolt.com/)  
 (_Spend 3-4 days (not more) to master those lessons_)
 
+## PostgreSQL (postgres)
+
+> 💡 OLTP - OnLine Transaction Processing
+
+- Many small queries
+- Writes + reads
+- Strong consistency
+- Transactions
+
 ## SQL (Structured Query Language):
 
 - Uses structured schemas (tables with fixed columns).
@@ -1548,3 +1557,5 @@ Use JOIN + aggregate (`JOIN`, `GROUP BY`) to fetch everything in one query.
 | **Share Update Exclusive** | Other VACUUM/DDL                 | Internal (VACUUM)                    | System doing background cleanup                          |
 | **Exclusive**              | All reads/writes by others       | `LOCK TABLE ... IN EXCLUSIVE MODE`   | You fully “checked out” document; others wait            |
 | **Access Exclusive**       | Everything                       | `ALTER`, `DROP`, `TRUNCATE`          | Admin locks doc for restructure; no access               |
+
+# TODO: separate section for noSQL (MongoDB) in particular
