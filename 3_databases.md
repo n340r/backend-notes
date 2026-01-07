@@ -12,6 +12,112 @@
 - Strong consistency
 - Transactions
 
+## MongoDB
+
+**write concern** - How many nodes must confirm a write.  
+Larger number `{w: 1}`, `{w: "majority"}` means safer, slower
+
+**read concern** - Which data you are allowed to read.  
+`local` - fastest, `majority` - commited by mojority, `linearizable` - strongest
+
+**update one field** without replacing the document
+
+```js
+// without $set - whole document replaced
+db.users.updateOne({ _id: 1 }, { $set: { age: 31 } });
+```
+
+**delete documents with condition** deleteMany vs drop
+
+```js
+// deleteMany
+db.users.deleteMany({ age: { $lt: 18 } });
+```
+
+- Removes matching documents
+- **Keeps** collection
+- **Keeps** indexes
+
+```js
+// drop
+db.users.drop();
+```
+
+- Deletes entire collection
+- Deletes indexes
+- Faster
+- Irreversible
+
+**projection** select some fields from a document
+
+```js
+db.users.find(
+  { age: { $gt: 18 } },
+  { name: 1, email: 1, \_id: 0 }
+)
+```
+
+**$in**
+
+```js
+tags: ["backend", "go", "db"];
+
+// any match
+{
+  tags: {
+    $in: ["go", "java"];
+  }
+}
+```
+
+**$all**
+
+```js
+tags: ["backend", "go", "db"];
+
+{
+  tags: {
+    $all: ["backend", "go"];
+  }
+}
+```
+
+**$elemMatch**
+
+```js
+grades: [
+  { score: 90, subject: "math" },
+  { score: 85, subject: "english" }
+]
+
+// match complex condition on same element
+{ grades: { $elemMatch: { score: { $gt: 88 }, subject: "math" } } }
+```
+
+### Explain in Mongo
+
+```js
+db.users.find({ email: "a@b.com" }).explain("executionStats");
+```
+
+- **IXSCAN** - index used
+- **COLLSCAN** -full scan ❌
+
+### Mongo Indexes
+
+- **Single field** - speed up queries filtering or sorting by that field
+- **Compound** - index on multiple fields; supports queries using the left-prefix of the index
+- **Multikey** (arrays) - auto-created when indexing an array field
+- **Text** - special index for a full-text search
+- **Geospatial** - index for location stuff `$near`, `$geoWithin`
+- **Hashed** - hashes the field, supports `=` only
+- **Partial**- index document based on condition
+- **Sparse** - index document only if certain field exists. legacy-ish
+
+### Mongo failover
+
+If **primary drops** MongoDB replica sets automatically elect a new primary; writes pause briefly but data is preserved if a majority is available.
+
 ## SQL (Structured Query Language):
 
 - Uses structured schemas (tables with fixed columns).
@@ -167,10 +273,10 @@ The two main approaches are **Sharding** and **Replication**.
 **Mongo Horizontal Scaling (Sharding)**
 
 - MongoDB **natively supports automatic sharding**:
-  - Data is split across shards using a **shard key**.
-  - A **mongos** query router handles routing.
-  - **Config servers** store metadata about the cluster.
-  - Each shard is deployed as a **replica set**, so every shard has its own primary and secondaries for redundancy.
+- Data is split across shards using a **shard key**.
+- A **mongos** query router handles routing.
+- **Config servers** store metadata about the cluster.
+- Each shard is deployed as a **replica set**, so every shard has its own primary and secondaries for redundancy.
 - Shard key can be a **composite key** (multiple fields). This is often used
 
 **Mongo Replication**
