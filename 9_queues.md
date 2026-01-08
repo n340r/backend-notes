@@ -1,4 +1,43 @@
-# Queues 
+# Queues
+
+## Dead Letter
+
+In case of **Kafka**
+
+- It does **nothing automatically**
+- Catch error
+- Produce message to topic.DLQ
+
+In case of **RabbitMQ:**
+
+- It is both **consumer + broker**
+- Consumer:
+  - `NACK` + `requeue=false` - message does into DLQ
+- Broker:
+  - Message expired (TTL)
+  - Queue length exceeded
+
+## Metrics for brokers
+
+Brokers expose metrics **themselves**
+
+**Kafka typical metrics:**
+
+- watch if disk is full
+- under-replicated partitions
+- broker restarts
+- consumer lag
+
+Exported via: `JMX Exporter -> Prometheus -> Grafana`
+
+**RabbitMQ exposes:**
+
+- Ack rate
+- Publish rate
+- Unacked messages
+- and more...
+
+Exported via: `Built-in Prometheus plugin`
 
 ## RabbitMQ
 
@@ -9,6 +48,9 @@ It supports the **AMQP protocol**.
 
 **Distributed task processing** - meaning that distributed system processes messages by **publisher confirmations** that
 RabbitMQ got the message and **consumer acknowledgements** that consumer got and processed the message.
+
+`ack` - message processed
+`nack` - message failed
 
 ### RabbitMQ Core Entities
 
@@ -33,6 +75,8 @@ RabbitMQ got the message and **consumer acknowledgements** that consumer got and
 - **Message**  
   The actual letter you send: it carries a payload (body) and optional metadata (headers, routing key, TTL). Exchanges and queues handle messages.
 
+**Quorum Queue** - A replicated queue where messages are written to a majority of nodes before ACK. **Majority must confirm** writes. Safer, slower
+
 ### 🧭 RabbitMQ Workflow
 
 - `assertExchange` → create exchange
@@ -50,7 +94,7 @@ flowchart LR
         P_App([Producer App])
         P_Conn[TCP Connection]
         P_Chan[AMQP Channel]
-        
+
         %% Internal Structure (Symmetric with Consumer now)
         %% The Connection holds/contains the Channel
         P_Conn -. contains .- P_Chan
@@ -77,7 +121,7 @@ flowchart LR
     end
 
     %% 2. Define the Lifecycle Flow (The Arrows)
-    
+
     %% Publish Path
     %% Producer App uses the Channel (inside the connection) to publish
     P_App --> |1. basic.publish| P_Chan
@@ -87,7 +131,7 @@ flowchart LR
     %% Broker pushes to Channel, Channel delivers to App
     Q --> |3. Push Message| C_Chan
     C_Chan --> |4. Delivery Callback| C_App
-    
+
     %% Acknowledgement Path
     C_App -.-> |5. basic.ack| C_Chan
 
@@ -95,7 +139,7 @@ flowchart LR
     classDef container fill:#f5f5f5,stroke:#333,stroke-dasharray: 5 5;
     classDef rabbit fill:#ff6600,stroke:#333,color:white;
     classDef app fill:#e1f5fe,stroke:#01579b;
-    
+
     class Producer_Side,Consumer_Side container;
     class Broker rabbit;
     class P_App,C_App app;
@@ -103,20 +147,22 @@ flowchart LR
 
 ### 🧭 Exchange Types
 
-**Direct** - (Default one) Routes to queue based on exact match on `routingKey` 
+**Direct** - (Default one) Routes to queue based on exact match on `routingKey`
 
 **Topic** - Pattern match.  
 Better using an example:
+
 - `*` - exactly one word
 - `#` - zero or more words
-Given a published message with a routing key: `iphone.17.black`
-1) `iphone.*.black`   → match     (* matches "17")
-2) `iphone.#`         → match     (# matches "17.black")
-3) `samsung.#`        → mismatch  (different first word)  
+  Given a published message with a routing key: `iphone.17.black`
 
-**Fanout** - Broadcast to all queues. Ignore the routing key.  
+1. `iphone.*.black` → match (\* matches "17")
+2. `iphone.#` → match (# matches "17.black")
+3. `samsung.#` → mismatch (different first word)
 
-**Headers** Match on custom headers instead of keys  
+**Fanout** - Broadcast to all queues. Ignore the routing key.
+
+**Headers** Match on custom headers instead of keys
 
 > 💡 `iphone.*.black` is called binding pattern
 
@@ -148,9 +194,10 @@ Given a published message with a routing key: `iphone.17.black`
 
 > Durable messages `deliveryMode: 2` require durable queue to matter
 
-### ✅ Acknowledgements 
+### ✅ Acknowledgements
 
 - **Manual ack**: `channel.ack(msg)`
+
   - Used for `at-least-once`
   - Use for **critical operations** (e.g. orders, payments). Do the operation, then acknowledge
   - Set with: `{ noAck: false }` in `channel.consume(...)`
@@ -171,18 +218,19 @@ Use the community plugin `rabbitmq_delayed_message_exchange` to retry messages w
 - Publish with header `x-delay` in milliseconds. Broker delivers after the delay.
 
 **Tiny Example**
+
 ```js
 const ch = await conn.createChannel();
-await ch.assertExchange('retry-ex', 'x-delayed-message', {
+await ch.assertExchange("retry-ex", "x-delayed-message", {
   durable: true,
-  arguments: { 'x-delayed-type': 'direct' },
+  arguments: { "x-delayed-type": "direct" },
 });
-await ch.assertQueue('jobs', { durable: true });
-await ch.bindQueue('jobs', 'retry-ex', 'jobs');
+await ch.assertQueue("jobs", { durable: true });
+await ch.bindQueue("jobs", "retry-ex", "jobs");
 
 // publish with 5s delay
-ch.publish('retry-ex', 'jobs', Buffer.from(JSON.stringify({ id: 1 })), {
-  headers: { 'x-delay': 5000 },
+ch.publish("retry-ex", "jobs", Buffer.from(JSON.stringify({ id: 1 })), {
+  headers: { "x-delay": 5000 },
   persistent: true,
 });
 ```
@@ -191,9 +239,34 @@ ch.publish('retry-ex', 'jobs', Buffer.from(JSON.stringify({ id: 1 })), {
 
 - **Producer** writes messages. May be idempotent that does not write duplicate messages
 - **Broker** - Kafka itself is dumb broker that ONLY stores and deliveres messages. Nothing more
-  - **Topic** - named stream of messages
-  - **Partition** - each topic is split into partitions. messages in partitions are in order
-- **Consumer** (or Consumer Group) - one (ones) who read messages. Handles all logic
+  - **Topic** - Named stream of messages
+  - **Partition** - Each topic is split into partitions. Messages in partitions are in order. **Leader** + **Replicas**
+- **Consumer** (or Consumer Group) - one (ones) who **requests and reads** messages. Handles all logic
+
+### Common problems with it
+
+- disk is full
+- too few partitions e.g. 3 partitions, 10 consumers, - **7 of those do nothing**
+- **under-replication** - partition leader has `1000` offset, replicas have `900`. If leader dies, we loose data.
+  (mostly DevOps problem, just know it exists)
+
+### Avro format
+
+Native message format to kafka. **Used very heavily**
+
+- Binary
+- Schema stored separately
+- Supports **schema evolution**
+
+**Key feature**
+
+- Consumer can **read old messages** with new schema
+
+### Kafka offset
+
+**offset** - sequentian number of a message inside partition. Not id, **just position number**.
+
+> 💡 **offset != message ID** - offset 42 today and tomorrow are different messages. Kafka deletes old messages, you may use compact topic (latest messages).
 
 ```sql
 Topic: payments
@@ -201,7 +274,55 @@ Topic: payments
  ├── Partition 1:  offset 0 1 2 3 4 ... --> consumer 2
  └── Partition 2:  offset 0 1 2 3 4 ... --> consumer 3
 ```
-> 💡 **One consumer** corresponds to **one partition**. Otherwise some consumers do nothing or consumers read multiple partitions
+
+> 💡 **One consumer** corresponds to **one partition**. Otherwise some consumers do nothing or consumers read multiple partitions.
+
+> 💡 To scale a number of consumers you need **more partitions**
+
+### Consumer lag
+
+**Exampl:e**
+
+- Latest offset in partition = 1000
+- Consumer offset = 900
+- Lag = 100 messages
+
+Higher lag == slower consumer. Can indicate **bugs**, **overload**, or **downstream failures**
+
+### Delivery guarantees
+
+**Producer side**
+
+- `acks=0` → at-most-once (fast, unsafe)
+- `acks=all` + retries → at-least-once
+- `enable.idempotence=true` → no duplicates from retries
+
+**Consumer side**
+
+- Auto-commit offset → risk message loss
+- Manual commit after processing → safe
+
+**Best practice**
+
+```
+read message
+process message
+commit offset
+```
+
+## Transactions in brokers
+
+- **Requires** Idempotent producer (identify duplicate messages), Transactional ID (identify same producer identity)
+- Only **message delivery guarantees**
+
+**Not used in RabbitMQ**. Instead ACK + retries used there
+
+**Mostly** used in kafka like so
+
+```
+Read from topic A → write to topic B → commit offset
+All or nothing.
+```
 
 ## 🗃️ RabbitMQ vs Kafka Persistence
 
@@ -249,49 +370,42 @@ Topic: payments
 
 - **At-least-once**
   - Broker keeps trying until it gets an ack. Requeue if consumer crashes
-  - Use with manual acknowledgements and idempotent handlers.  
-  - *Example*: order service rechecks "charge already done?" before charging again.
+  - Use with manual acknowledgements and idempotent handlers.
+  - _Example_: order service rechecks "charge already done?" before charging again.
 - **At-most-once**
   - Message is delivered zero or one time. If consumer dies mid-work, message is gone.
   - Use with auto ack when losing a message is acceptable.
-  - *Example*: analytics counter for user action.
+  - _Example_: analytics counter for user action.
 - **Exactly-once**
-  - Goal: handle a message *just one time*, even if retries happen under the hood.
-  - Combine *at-least-once* delivery with idempotency.  
-  - *Example*: billing worker checks db for matching `idempotency key` or `transaction id`. Is this message processed already ?
+  - Goal: handle a message _just one time_, even if retries happen under the hood.
+  - Combine _at-least-once_ delivery with idempotency.
+  - _Example_: billing worker checks db for matching `idempotency key` or `transaction id`. Is this message processed already ?
 
 ## ⚔️ RabbitMQ vs Kafka
 
-> 💡 In *Kafka* **Offset** = the unique, incremental position number of each message inside a Kafka **partition**.
 > 💡 Kafka **topic** (which you might think of as “a queue”) is split into multiple **partitions** for scalability and parallelism.
 
-| Feature           | RabbitMQ                                                     | Kafka                                                              |
-| :---------------- | :----------------------------------------------------------- | :----------------------------------------------------------------- |
-| **Broker Type**   | **Smart Broker**: Manages message routing, queuing, and delivery logic (pushes messages to consumers). | **Dumb Broker (Log-based)**: Simple, immutable log of messages. Consumers pull messages and manage their own state (offsets). |
-| **Persistence**   | Messages are typically **deleted after delivery/acknowledgment**. Durability options (durable queues, durable messages) ensure survival of broker restarts, but not long-term storage or replayability. | All messages are **persisted to disk** in an immutable log for a configurable retention period. Supports re-reading messages. |
-| **Delivery**      | **At-Least-Once** (with acknowledgments) by default. At-most-once (by disabling acks). Exactly-once is complex and requires application-level logic. | **At-Least-Once** by default. Exactly-once achievable with Kafka Transactions. At-most-once by committing offsets before processing. |
-| **Message Routing** | **Rich routing capabilities** via various Exchange types (Direct, Topic, Fanout, Headers). Built-in Fanout Exchange for broadcast. | Primarily **topic-based partitioning**. Fanout/broadcast achieved by multiple consumer groups subscribing to the same topic. |
-| **Use Case**      | **Traditional message queuing**, task queues, complex routing. | **Event streaming**, log aggregation, real-time analytics, big data ingestion. |
+| Feature             | RabbitMQ                                                                                                                                                                                                | Kafka                                                                                                                                |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------- |
+| **Broker Type**     | **Smart Broker**: message routing, queuing, delivery logic (**pushes messages** to consumers).                                                                                                          | **Dumb Broker (Log-based)**: Simple, immutable log of messages. **Consumers pull messages** and manage their own state (offsets).    |
+| **Persistence**     | Messages are typically **deleted after delivery/acknowledgment**. Durability options (durable queues, durable messages) ensure survival of broker restarts, but not long-term storage or replayability. | All messages are **persisted to disk** in an immutable log for a configurable retention period. Supports re-reading messages.        |
+| **Delivery**        | **At-Least-Once** (with acknowledgments) by default. At-most-once (by disabling acks). Exactly-once is complex and requires application-level logic.                                                    | **At-Least-Once** by default. Exactly-once achievable with Kafka Transactions. At-most-once by committing offsets before processing. |
+| **Message Routing** | **Rich routing capabilities** via various Exchange types (Direct, Topic, Fanout, Headers). Built-in Fanout Exchange for broadcast.                                                                      | Primarily **topic-based partitioning**. Fanout/broadcast achieved by multiple consumer groups subscribing to the same topic.         |
+| **Use Case**        | small messages, **complex routing logic**                                                                                                                                                               | **Event streaming**, log aggregation, real-time analytics, **high throughput**                                                       |
 
-## RabbitMQ usage example on a project:
+## Backpressure
 
-```plaintext
-RabbitMQ is a message broker that offers a flexible and reliable system for transmitting some messages between systems.
-It supports the AMQP protocol. Also Rabbit enables distributed message or task processing, which is very beneficial in a microservices architecture like our online store.
+System **can't keep up**, too many messages, need to slow down
 
-In my project, there was a product service and an order service. Under normal circumstances, both services interacted with
-other services via an API Gateway. However, in certain situations, such as checking product availability when
-placing an order, my order service would directly send an HTTP request to the product service.
-And actually this is where Rabbit came into play.
+- **Kafka** - consumer just asks for less messages in a batch or asks less frequently, lag increases, but nothing critical
+- **RabbitMQ** - broker pushes messages, if consumer is slow, system can carsh. Solution is `prefetch = N` param so that we set how much consumer can handle.
 
-To improve architecture and avoid direct dependencies between microservices, we implemented Rabbit.
-We used the concept of "exchanges" and "queues" in Rabbit to control how messages are transmitted.
-So when the "Orders" service receives a new order, it sends a message with order information to an exchange (like product ID).
-The exchange routes this message to a queue listened to by the "Products" service.
+## 1 million messages broker question
 
-Once the "Products" service receives a message, it checks product availability. After checking, it sends a message
-(like availability or lack thereof) back to another exchange which connected to a queue that the "Orders" service listens to.
-And the main advantage of using RabbitMQ in this scenario is that interaction between services becomes completely asynchronous.
-That is, services don't block while waiting for a response from another service. Moreover, using RabbitMQ ensures reliability,
-as even if one of the services fails, messages aren't lost; they remain in the queue until they are successfully processed.
-```
+Choose **Kafka** because it is built for this
+
+- Many partitions (e.g. 50–100)
+- Consumer groups scaled easily
+- Batch processing
+- Compression enabled
+- Proper keying
