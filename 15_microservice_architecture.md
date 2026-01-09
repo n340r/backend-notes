@@ -560,27 +560,24 @@ User makes change (Command)
 
 **DDD** is about organizing your code to match the business logic, not just technical layers.
 
-Instead of thinking “controllers → services → DB".  
-**DDD** says:  
-“Let’s model the real-world business domain clearly in code.
+**Instead of** thinking only “controllers, services, fabrice, ports, adapters", **DDD says**: “Let’s **model the real-world business** domain clearly in code.
 
-### DDD building blocks:
+Now lets talk about **DDD Models** (building blocks)
 
-1. **Entity**
+> 💡 **Model** (in DDD) - general name for any of the following abstractions (meaning: Entity, Value Object, Aggregate, Domain Event)
+
+### 1. **Entity**
 
 - Something **with id** that changes over time
 - Examples: User, Flight, Booking
 
 ```ts
-class User {
-  constructor(id, name) {
-    this.id = id;
-    this.name = name;
-  }
+export class User {
+  constructor(public readonly id: string, private name: string) {}
 }
 ```
 
-2. **Value Object**
+### 2. **Value Object**
 
 - Defined only by their value
 - No unique ID
@@ -593,10 +590,14 @@ class Money {
     this.amount = amount;
     this.currency = currency;
   }
+
+  if (amount < 0) {
+    throw new Error("Money ammount cannot be negative")
+  }
 }
 ```
 
-3. **Aggregates**
+### 3. **Aggregates**
 
 ```ts
 class Order {
@@ -606,6 +607,10 @@ class Order {
   }
 
   addItem(item) {
+    //invariant
+    if (item.quantity <= 0) {
+      throw new Error("Quantity must be positive");
+    }
     this.items.push(item);
   }
 }
@@ -617,9 +622,9 @@ class Order {
   `const order = new Order();`
 - All changes must go through the root to maintain **data integrity**.  
   `order.addItem(item);` - correct  
-  `order.items.push(item)` - incorrect. Outside the aggregate
+  `order.items.push(item)` - **Incorrect !**. Mutates `items` outside the aggregate
 
-4. **Repositories**
+### 4. **Repositories**
 
 - **Only** works with Aggregates. Not with entities, not with value objects.
 - **Hide DB logic** — provide access to aggregates/entities
@@ -642,10 +647,78 @@ export interface UserRepository {
 }
 ```
 
-5. **Domain Services**
+### 5. **Invariant**
 
-- If logic **naturally belongs to aggregate** --> leave it there
-- If logic **spans multiple aggregates** --> domain service
+A rule that **must always be true**
+
+DDD does not mandate rich models, but DDD works best with rich domain models.
+
+**Examples**
+
+- Order **cannot** be paid twice
+- Booking end date must be **after** start date
+- User age must be **≥ 18**
+
+### A note on Invariants
+
+This is **NOT a DDD concept** but still is very important to know. There are two types of ensuring **invariants**
+
+1. **Rich Domain Model**
+
+✅ **Highly preferred** in DDD
+
+- Entities **contain behavior**
+- Entities **enforce business rules**
+- State changes **only through methods**
+
+```ts
+// impossible to set invalid state
+class User {
+  private age: number;
+
+  constructor(private readonly id: string, private name: string, age: number) {
+    // invariant enforced on creation
+    if (age < 18) {
+      throw new Error("User must be at least 18 years old");
+    }
+    this.age = age;
+  }
+
+  // invariant enforced on mutation
+  changeAge(newAge: number) {
+    if (newAge < 18) {
+      throw new Error("User must be at least 18 years old");
+    }
+    this.age = newAge;
+  }
+}
+```
+
+2. **Anemic Domain Model**
+
+⚠️ Possible, DDD allows you to do so but you **loose most** of DDD benefits
+
+- Entities are **just data containers** (fields + getters/setters)
+- Business logic **lives in services**
+- Entities **DO NOT** protect their own correctness
+
+```
+class Order {
+  id: string;
+  total: number;
+  status: 'NEW' | 'PAID';
+}
+
+const user = new User();
+user.age = -5;// ⚠️ Possible, but BAD
+```
+
+DDD does not mandate rich models, but DDD works best with rich domain models.
+
+### 6. **Domain Services**
+
+- If logic **naturally belongs to aggregate** -> leave it there
+- If logic **spans multiple aggregates** -> domain service
 
 ```ts
 // User aggregate
@@ -660,40 +733,52 @@ export class User {
 ```
 
 ```ts
-export interface UserRepository {
-  findByEmail(email: string): Promise<User | null>;
-}
-
-export interface PasswordHasher {
-  verify(password: string, hash: string): Promise<boolean>;
-}
-
-export interface TokenService {
-  issueToken(payload: { userId: string }): string;
-}
-
-// Authentication domain service
+// This does a log of things - does NOT fit inth User aggregate.
 export class AuthenticationService {
   constructor(
     private readonly users: UserRepository,
-    private readonly hasher: PasswordHasher,
+    private readonly verifier: CredentialVerifier,
     private readonly tokens: TokenService
   ) {}
 
-  // Does a lot of things: user, hash, tokens, etc. Does not fit inth User aggregate
   async verifyUser(credentials: { email: string; password: string }) {
     const user = await this.users.findByEmail(credentials.email);
 
-    const ok = await this.hasher.verify(credentials.password, user);
+    if (!this.verifier.verify(password, user.passwordHash))
+      throw new Error("Invalid credentials");
 
     const token = this.tokens.issueToken({ userId: user.id });
-
     return token;
   }
 }
 ```
 
-6. **Domain Events**
+### Side note on Services
+
+Now, an **important clarification**. The `AuthenticationService` above is called **Application Service** in DDD terms.
+
+1. **Application Service** - Coordinate: i/o, talk to db, infrastructure
+2. **Domain Service** - Pure business logic
+
+We've already seen **Domain Service** before as well. `CredentialVerifier` is a **domain serivce** if it contains logic like this:
+
+```ts
+export class CredentialVerifier {
+  verify(password: string, hash: string): boolean {
+    export class CredentialVerifier {
+      verify(password: string, hash: string): boolean {
+        // domain rule: password matching
+        return password === hash; // simplified
+      }
+    }
+    return password === hash; // simplified
+  }
+}
+```
+
+// In DDD, correctness is not enforced by “remembering rules”, but by making invalid states unrepresentable.
+
+7. **Domain Events**
 
 - Announce that something **just happened** in the domain.
 - Allow **other parts of the system to react** (like microservices).
@@ -707,13 +792,15 @@ class UserRegisteredEvent {
 }
 ```
 
-7. **Bounded Contexts**
+8. **Bounded Contexts**
 
 - A **boundary around a part of the system** where terms, logic, and models have a specific meaning
 - Booking context, Pricing context etc.
 - Microserivces **often map 1:1 to bounded context** but DDD does not enforce microservices.
 
 > 🚧 Models/terms inside one context don’t leak into another.
+
+### DDD Design and architecture concepts
 
 ### DDD Travel-tech service example
 
@@ -726,6 +813,10 @@ class UserRegisteredEvent {
 | **Domain Service**  | `PaymentService`, `FareCalculationService` |
 | **Domain Event**    | `FlightBookedEvent`, `PaymentFailedEvent`  |
 | **Bounded Context** | `Booking`, `Search`, `Scheduling` services |
+
+### Anti-patterns, counter-examples
+
+**Central-service driven design** - **BAD** practice with on god-service that everyone depends on and dumb DTO-entities
 
 ## Event-Driven Design (EDD)
 
