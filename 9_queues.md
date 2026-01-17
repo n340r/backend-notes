@@ -197,7 +197,6 @@ Better using an example:
 ### ✅ Acknowledgements
 
 - **Manual ack**: `channel.ack(msg)`
-
   - Used for `at-least-once`
   - Use for **critical operations** (e.g. orders, payments). Do the operation, then acknowledge
   - Set with: `{ noAck: false }` in `channel.consume(...)`
@@ -243,7 +242,54 @@ ch.publish("retry-ex", "jobs", Buffer.from(JSON.stringify({ id: 1 })), {
   - **Partition** - Each topic is split into partitions. Messages in partitions are in order. **Leader** + **Replicas**
 - **Consumer** (or Consumer Group) - one (ones) who **requests and reads** messages. Handles all logic
 
-### Common problems with it
+Consumer basically chooses **what** to read and **how to read**
+
+```go
+consumer.subscribe("booking")// what to read - subscribe to topic
+consumer.group.id = "booking-workers"// how to read - consumer group
+```
+
+Now lets talk about consumer groups and **how to read** in more detail, but nothing fancy.
+
+Lets say we have **booking topic** with **5 partitions** and **5 consumers** wanting to read from it.
+
+```text
+Topic booking (5 partitions)
+
+Consumer Group "A"
+ ├─ Consumer 1
+ ├─ Consumer 2
+ ├─ Consumer 3
+ ├─ Consumer 4
+ └─ Consumer 5
+```
+
+We basically have 2 options
+
+1. Consumers have same `group.id` (booking-workers) so each message is handled once. This is called **competing consumers**
+
+Topic booking (5 partitions)
+
+```text
+Group booking-workers
+ ├─ C1 → P0
+ ├─ C2 → P1
+ ├─ C3 → P2
+ ├─ C4 → P3
+ └─ C5 → P4
+```
+
+2. Consumers have different `group.id` (A, B, C ...) so each consumer reads **all** messages by its own. This is called **fan-out**
+
+```text
+Group A → читает всё
+Group B → читает всё
+Group C → читает всё
+Group D → читает всё
+Group E → читает всё
+```
+
+### Common problems with Kafka
 
 - disk is full
 - too few partitions e.g. 3 partitions, 10 consumers, - **7 of those do nothing**
@@ -345,17 +391,14 @@ All or nothing.
 ## 🧱 Role of Queues in Server Architecture
 
 1. **Load Balancing Among Handlers**
-
    - Distribute tasks across multiple workers
    - Add more consumers to scale under high load
 
 2. **Message Buffering for Resilience**
-
    - Queue stores incoming messages if handlers are slow/unavailable
    - Prevents message loss during spikes or failures
 
 3. **Ordered & Reliable Processing**
-
    - Ensures messages are processed **in the order sent**
    - Combined with **acknowledgements**, guarantees reliability
 
