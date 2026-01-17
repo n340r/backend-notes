@@ -6,9 +6,9 @@
 
 ### Tell us about your most recent workplace and the project you worked on.
 
-I work as a backend developer at **ETG**, a global flight and hotel booking platform operating in **over 100 countries**, handling very **high traffic at peak** up to **20K** RPS
+---
 
-_For HR:_
+I work as a backend developer at **ETG**, a global flight and hotel booking platform operating in **over 100 countries**, handling very **high traffic at peak** up to **20K** RPS
 
 My main focus is on ongoing process of **migrating critical booking and pricing functionality** from a large Node.js monolith into dedicated backend microservices written in Go,  
 driven primarily by scalability and reliability constraints.
@@ -16,7 +16,7 @@ driven primarily by scalability and reliability constraints.
 I also **led the** backend work on **Hybrid Rate feature**. This one required loads of new business logic, writing more than 100 unit tests as well as designing
 new APIs for the frontend.
 
-_More in-depth:_
+---
 
 Beyond feature development, a large part of my **day-to-day work** involved
 
