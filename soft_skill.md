@@ -6,23 +6,34 @@
 
 ### Tell us about your most recent workplace and the project you worked on.
 
-Most recently I worked at **ETG**, a global flight and hotel booking platform operating in **over 100 countries**, handling very **high traffic at peak** - close 10K RPS.
+I work as a backend developer at **ETG**, a global flight and hotel booking platform operating in **over 100 countries**, handling very **high traffic at peak** up to **20K** RPS
 
-My main focus was **extracting core search and booking legecy functionality** from monolith into independent microservices written in Go and Node.js.  
-I worked on **defining service boundaries**, **migrating critical logic**, and setting up **CI/CD**, infrastructure, and monitoring.
+_For HR:_
 
-_Frontend side of things:_
+My main focus is on ongoing process of **migrating critical booking and pricing functionality** from a large Node.js monolith into dedicated backend microservices written in Go,  
+driven primarily by scalability and reliability constraints.
 
-As for the frontend part of it, worked closely with **UI and Analytics team** to understand user behaviour and update
-UI based on real data. That way we **redesigned core components** such as **Hotel Card** and drove significant improvements in terms of clicks and conversion into bookings.
+I also **led the** backend work on **Hybrid Rate feature**. This one required loads of new business logic, writing more than 100 unit tests as well as designing
+new APIs for the frontend.
 
-_Another project:_
+_More in-depth:_
 
-One more big project i can tell you about is a huge personal account page for hotel owners. My work was to refactor complex **legacy form on the frontend** and underlying
-**backend logic** for **fine-grained hotel rate creation**. The challenge was to properly test and handle **more than a hundred cases** as well as **add new ones** wihout breaking
-existing functionality. This obviously improved reliability and reduces support overhead which was massive before.
+Beyond feature development, a large part of my **day-to-day work** involved
 
----
+- designing **backend APIs**
+- **improving inter-service communication** (including Kafka-based event processing and replacing HTTP with gRPC where lower latency and stricter contracts were required)
+- integration testing mostly to validate system invariants (such as no more than one booking can be created at a time under concurrent requests)
+
+I was also involved in observability and production readiness, i did incident management, postmortems
+
+### what are you intrested in ?
+
+Overall, I enjoy solving **complex backend problems** with **many moving parts**.
+
+In recent years, I’ve become especially interested in **distributed systems**, **concurrency**, and **high-load backend services** because this is exactly what a large system with lots
+of moving parts is
+
+I’m motivated to keep deepening my knowledge in this area and to share that knowledge through code reviews, technical discussions, and improving system design over time.
 
 ### Tell us about your team at your last job. How were responsibilities distributed? How did collaboration work?
 
