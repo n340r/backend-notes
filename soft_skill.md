@@ -1,8 +1,14 @@
 # ✨ Soft Skill Dumb Questions
 
-## 🇬🇧 Basic
+This one is dedicated to **HR** / **Behavioral** / **Engineering Manager** questions.
+
+**Engineering Manager** interview is a **1.5hr** long discussion of your experience with main focus on your responsibility and impact.
+
+### (For me only) Speech disclaimer
 
 “I want to mention that I have a stutter problem that can show up under stress. I’m currently **undergoing speech therapy**, so i might **speak slowlier than usual** or **take a moment to phrase something**, that’s expected. With that out of the way lets proceed”
+
+## 🇬🇧 Basic
 
 ### Tell us about your most recent workplace and the project you worked on.
 
@@ -100,7 +106,7 @@ In total I've designed **more than 10 services end-to-end**: from business requi
 
 ---
 
-### Please share what motivated you to start looking for a new job and what factors led to your decision to leave your previous role.\*\*
+### Please share what motivated you to start looking for a new job and what factors led to your decision to leave your previous role.
 
 I had a **great experience at ETG** — strong team, interesting technical challenges, high-load application. But after **living in the UK for over a year**, I realized
 I want to **integrate more** and work in a **fully English-speaking**, fast-paced environment. My team was mostly Russian-speaking and management was English-speaking, so communication wasn’t always aligned with how I want to **grow professionally**.
@@ -155,6 +161,8 @@ For example:
 
 - I mainly want to write code but i enjoy leadership **that is still hands-on** work
 
+---
+
 ## РФ компании
 
 (Дополтительно к тому что выше)
@@ -162,4 +170,54 @@ For example:
 - Вопрос на знание английского: скажи 2 предложения о чем-либо
 - Сможешь ли предоставить подтверждение опыта работы ?
 - Насколько активно ищещь работу сейчас ? Есть ли оферы на руках ? Финальные стадии ?
-- Скольь
+
+---
+
+Now to **Engineering Manager** like questions
+
+---
+
+### Tell me about a time you had to deliver a complex and ambiguous feature. What was unclear about it, how did you approach getting clarity. Who do you talk to in a company. How do you know the moment when everything was clear for the task ?
+
+**What they test with this questions:**
+
+- how to structure uncertainty
+- who do you talk to
+- how do you turn ideas and discussion into executable work?
+
+**Answer:**
+
+The most recent example is **Hybrid Rates** service. I was responsible for extracting legacy logic into a dedicated
+microservice. There were lots of business logic scenarios and we had more than 200 hotels depending on it. So obviously
+we could not afford **data loss** and **long downgimes**.
+
+For eash mid-large feature we start by writing **RFC** (Request for comments) file in a separate slack channel with a
+deadline. This takes 2-3 days of focused work, pulling differnet people in and the rest of the week of async feedback.  
+That **upfront alignment** saved us multiple weeks later by preventing **rework**, clarifying **ownership**,  
+**acceptence** criteria, **deployment** strategies.
+
+I communicated to frontend devs, Product manager, other developers to discuss edge cases.
+
+---
+
+### Let's say you've gone through the process of thinking things through, you have a basic understanding and architecture in your head. How do you get a feedback on those, how do you go about getting a thumbs up that this is the right approach ? Do you discuss with other engineers, do you have a process of confirmation ?
+
+**What they test with this questions:**
+
+- consensus vs velocity
+- how do you sanity check
+- who decides on a “yes”
+- your unique role in the process. I listen broadly but im responsible for the final call.
+
+**Answer:**
+
+1. First of all, **RFC** files are time-scoped as i already mentioned.
+2. Second, i need to personally make sure that for me and my team **task** is clear, **tradeoffs** are explicitly accepted, there are **no unresolved concerns**, nothing is left for **figuring out later**, risks are understood.
+3. Third, we not only discussed the task itself, but the **deployment** strategy as well as testing and metrics we'll
+   keep an eye on to make sure everythign runs smoothly.
+
+---
+
+### Do you have a concept of "Architectural decision records" (ADR), concept of staff and principle engineers ?
+
+todo
