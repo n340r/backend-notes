@@ -177,7 +177,7 @@ Now to **Engineering Manager** like questions
 
 ---
 
-### Tell me about a time you had to deliver a complex and ambiguous feature. What was unclear about it, how did you approach getting clarity. Who do you talk to in a company. How do you know the moment when everything was clear for the task ?
+### ❓ Tell me about a time you had to deliver a complex and ambiguous feature. What was unclear about it, how did you approach getting clarity. Who do you talk to in a company. How do you know the moment when everything was clear for the task ?
 
 **What they test with this questions:**
 
@@ -188,7 +188,7 @@ Now to **Engineering Manager** like questions
 **Answer:**
 
 The most recent example is **Hybrid Rates** service. I was responsible for extracting legacy logic into a dedicated
-microservice. There were lots of business logic scenarios and we had more than 200 hotels depending on it. So obviously
+microservice. There were **lots of scenarios** and we had **more than 200 hotels** depending on it. So obviously
 we could not afford **data loss** and **long downgimes**.
 
 For eash mid-large feature we start by writing **RFC** (Request for comments) file in a separate slack channel with a
@@ -200,7 +200,7 @@ I communicated to frontend devs, Product manager, other developers to discuss ed
 
 ---
 
-### Let's say you've gone through the process of thinking things through, you have a basic understanding and architecture in your head. How do you get a feedback on those, how do you go about getting a thumbs up that this is the right approach ? Do you discuss with other engineers, do you have a process of confirmation ?
+### ❓ Let's say you've gone through the process of thinking things through, you have a basic understanding and architecture in your head. How do you get a feedback on those, how do you go about getting a thumbs up that this is the right approach ? Do you discuss with other engineers, do you have a process of confirmation ?
 
 **What they test with this questions:**
 
@@ -209,8 +209,6 @@ I communicated to frontend devs, Product manager, other developers to discuss ed
 - who decides on a “yes”
 - your unique role in the process. I listen broadly but im responsible for the final call.
 
-**Answer:**
-
 1. First of all, **RFC** files are time-scoped as i already mentioned.
 2. Second, i need to personally make sure that for me and my team **task** is clear, **tradeoffs** are explicitly accepted, there are **no unresolved concerns**, nothing is left for **figuring out later**, risks are understood.
 3. Third, we not only discussed the task itself, but the **deployment** strategy as well as testing and metrics we'll
@@ -218,6 +216,139 @@ I communicated to frontend devs, Product manager, other developers to discuss ed
 
 ---
 
-### Do you have a concept of "Architectural decision records" (ADR), concept of staff and principle engineers ?
+### ❓ Do you have a concept of "Architectural decision records" (ADR), concept of staff and principle engineers ?
+
+**What they are asking:**
+
+- Do you think about how architectural decisions scale beyond one **feature / year / team**
+- How decisions are **recorded / revisited / challenged**
+- If you have a team where decisions **survive people leaving** the company”
+
+Staff, Principal engineers - more about carrying experience across teams
+
+**ADR** - Architectural decision records
+
+1. Captures the final decision
+2. Records why alternatives were rejected
+3. Stable reference for future teams
+
+Difference between request for comments file
+
+- **RFC** - decision in progress
+- **ADR** - decision that must outlive the feature and people
+
+Staff = “Teams don’t step on each other.”
+Principal = “We won’t regret this in 3 years.”
+
+Yes, we do rely on **ADR** not to repeat other people's mistakes and have once in 2 week Staff engineer meeting to listen to ideas
+
+---
+
+### ❓ Can you tell me about a time you were responsible for leading a complex feature. Who were those people you had underneath/with you that you delegated to. What challenges you faced and how do you overcome them. Have you ever worked on a larger team, did you have the opportunity where someone has gone "this is your big project and people to help you out, you are responsible and accountable for delivery, communication, planning and everything"
+
+**What they are asking:**
+
+- Basically how much of a responsibility you have
+- how you structure work
+
+The most unclear and ambiguous task i had to deliver recently was the backend for **Hybrid Rate** feature
+
+I did not have a formal authority of being called lead, but I was **responsible for delivery**.
+
+At the time we had just hired a less experienced **mid-level engineer**.
+
+I broke the work down so that
+
+**I owned** the high-risk crucial parts:
+
+- architecture
+- data contracts
+- deployment strategy
+- database migrations
+
+**I delegated:**
+
+- endpoints
+- tests
+- new business logic needed.
+
+The way we progressed quite fast without loosing quality and going into miss-communication:
+
+- I **always discussed** in advance on a high level the \**approach he would take*8 to implement something rather than rushing right in and giving me a surprise on a code review
+- Always be available for the **questions**.
+- Frequent **code reviews**, splitting code into tiny pieces.
+
+The way we kept business up to date on our work is basically Milestones on our work
+
+- migrate this piece of data
+- migrate those endpoints
+  make sure gRPC is set up and running
+
+---
+
+### ❓ Can you tell about a time you improved observability? What was missing and what impact did your changes have.
+
+**What they are testing:**
+
+- Are you just a **passive consumer** of observability or do you actually care ?
+- Do you understand the significance of **observability** ?
+
+**Obviously** you should know: metrics, logs, traces + triggers/alerts
+
+Answering **framework:** “We didn’t have **signal X**, which caused **blind spot Y**, so we **added metric/alert Z**, which reduced risk”
+
+I'll give you three examples of answering this question:
+
+---
+
+1. 💥 For each Kafka event we loaded **all bookings of a hotel** into memory.
+   During **Black Friday** some hotels had **huge** booking history, so **memory grew** unbounded and the service was **killed by OOM**.
+
+We had an OOM incident where a pricing service loaded all bookings of a hotel into memory for Kafka events. During Black Friday this caused unbounded memory growth
+
+We obviously changed this ineffician algorithm, started processing those bookings in batches.
+
+**What i added:**
+
+- Kafka consumer lag
+- Memory usage of consumers
+
+---
+
+2. 💥 Missing **204 statuses**
+
+Backend changed an availability endpoint `GET /availability?hotelId=123&dates=...` toreturn `204` for **no-data** but we did not have
+a metric for it. Frontend **missed the task** on upating their status to `204` - maybe task got lost due to it being
+**seemingly insignificant**.
+
+This caused \*8request amplification** and OOM in the **availability\*\* service
+
+After backend with a new return status rolled out
+
+**What i added:**
+
+- Status code ratio metrics (`200`/ `204`/ `4xx`)
+
+---
+
+3. 💥 Alert fatigue during peak load.
+
+**Alerts** and triggers weren’t adjusted” along with scaling the system.  
+Engineers **ignored important** alerts because they **drowned** in **alert noise**.
+
+**What i added:**
+
+- Scaling-aware alerts. Change triggers with system scaling
+- **percentage-based** error rates rather than static numbers
+
+---
+
+### Have you ever used observability to make development decisions? What metrics were you looking at, how did you understand them and how did those change your understanding, your architecture. Was there ever a moment where you looked at the metric and went "oh, this requires me to make a change in the system"
+
+**What they are testing:**
+
+- Keeping an eye on **costs** and **efficiency**
+- **Proactive behaviour** (not just incidents and firefighting)
+- **Mature** point of view: don't rewrite without a clear reason.
 
 todo
