@@ -351,4 +351,207 @@ Engineers **ignored important** alerts because they **drowned** in **alert noise
 - **Proactive behaviour** (not just incidents and firefighting)
 - **Mature** point of view: don't rewrite without a clear reason.
 
-todo
+---
+
+1. 💥 Option 1. Memory costs ramping on staging.
+
+I noticed an **unusual growth** in **S3 cloud storage** and **snapshot costs** for staging, which was disproportionate to actual usage.  
+Turned out we had **useless** stage **Kafka topic backups** and **database snapshots** on staging because they provided no value.
+
+---
+
+2. 💥 Option 2. SQS + Kinesis
+
+Since we process a lot of use behavior from search and hotel managment, we had a legacy `SQS` queue + `Kinesis` streaming pair for those.
+
+I actually saw the usage cost for both of those, **validated the change** with a staff engineer and decided to migrate event processing logic with Kafka
+becaues **throughput allows** it and we win pricing-wise.
+
+What i did step by step:
+
+- I created a **new topic** in an **existing** kafka cluster
+- **moved consumers**
+- validated reads
+- moved **producers**,
+- set up a basic set of metrics for new consumers
+- turned off SQS, Kinesis
+
+### How do you prepare your code so that it is comparable with metrics required ? How do you ensure that there is technical implementation to achieve metrics, observability ?
+
+**What they are testing:**
+
+- Is observability an afterthought or is it an integral part of development process ?
+
+We obviously **do not write** business logic for metrics but observability is **never an afterthought**.
+
+To me **this means** developing the code so that there are **explicit boundaries** and **separation of concerns**.
+
+Monitoring one thing or another is **only possible** when there are **boundaries**. When everything happens in one function or one service or one API request then it would
+be more difficult for us to find out what exactly is wrong
+
+We often have issues with performance and metrics help us identify wether that is **kafka memory**, **backpressure** / **consumer lag**, **database** is a bottleneck
+
+### Switching away from the tech a little bit. Tell me about a time you've really understood your end-users. How has your knowledge or understanding of end-users changed the way you designed or implemented a feature ?
+
+Please help me correctly structure this, choose the best option
+
+1. **👥 Option 1: Promo banner placement**.
+
+We were testing a **promo-banner** on the search-page’s frontend and wanted to make it’s **conversion** as high as possible without making it too **intrusive**.  
+Users **skip intrusive irrelevant** commercials and promos.
+
+What we did is along with **design and analytics team** we started to tweak the API so that banner placement and content is determined on certain user behavior
+and info that we received from the frontend.
+
+> 💡 "What metrics did you use to determine banner placement ?" - New users: no banner, Returning users - small banner, Ones who searched multiple times - promo shown once
+
+2. **👥 Option 2: Conversion rate drop**.
+
+I saw a noticeable drop in search to book **conversion** and found out that at the same time **search response times **increased** due to a **database issue\*\*.
+
+That basically **reinforced the idea** that search is not a feature, it is a **core user expectation**. As a result of that we not only resolved the existing issue,  
+we improved **caching**, **optimised** DB, added **tighter latency metrics** for search and filtering related api-endpoints.
+
+> 💡 "How did you measure conversion ?" - We count how many users with same `tenent_id` completed the funnel `search → view → book → pay`. This is not too complicated just requires consistent event tracking from **multiple services**.
+
+> 💡 "What was the issue with DB ?" - The database became a bottleneck during peak load and needed scaling.
+
+> 💡 "You said you added caching, what kind of caching ?" - We added **availability** data caching with short TTL. Search result caching existed already.
+
+### How do you normally get this info about users ? Is it through PM ? Is the PM doing the investigation for you? Say you have a new project on the go and they're building "assistance portal" and when it comes to calls we need to understand when the spike of usage comes in, what type of user personas are going to log in, what devices they might be using, retention rate, features of the system used more than others, etc, who is doing all of that research before you actually proceed and development starts ? Is this "discovery phase" done only by the PM or by developers as well ?
+
+This **depends** largely on a project we're building but **most of the time**, Discovery process is actually shared between **PM, Analytics**.
+Those people don’t get the data out **of nowhere because** we as engineers provide this data to them via request metadata.
+
+I can tell you how data gathering works.
+
+**How data gathering works:**
+
+- Services emit evens,
+- Kafka consumes those analytics need
+- Store it into ClickHouse
+- This is later **used by analytics** to build their dashboards etc.
+
+(The following is already diving too deep into technical, but just in case).
+
+To give you an exact examples of what we do on the backend:
+
+```json
+{
+  "event": "SearchCompleted",
+  "user_type": "guest",
+  "device": "mobile",
+  "latency_ms": 320,
+  "results_count": 14
+}
+```
+
+Another thing we do is extract **user-agent** (UA) already present in the header, we extract it's useful parts (device type, OS, or browser) in int the api-gateway.
+And store those into **attach those** to domain event like `SearchCompleted` and store it into ClickHouse.
+
+### We hold an enormous amount of data. Hold very sensitive PR data: medical records, criminal records of people. What is your philosophy on security and can you give me an example of security on each layer: DB, transport, backend, frontend etc. and how you would go about implementing security on each one of those. GDPR data, do you do anything special to that sort of data (like credit card data)
+
+**What they are asking:**
+
+- They likely have a security team and understand that this is a **separate topic** of it's own.
+- They want to test if i understand the basics of **security on each level** as a dev.
+
+I rely on IT security team we have to **set the policy** and rules and I basically **implement** this all in code.
+I do **understand** the **most crucial** security concerns on each level.
+
+To give you an example:
+
+- **DB**:
+  - guest users can’t do admin stuff
+  - encrypted backups
+  - encrypted passwords
+  - dont store data you dont need.
+
+- **Transport layer**:
+  - TLS everywhere
+  - strict auth
+  - do not return DB-layer errors to en end-user
+
+- **API layer**:
+  - rate limiting
+  - secrets management
+  - Authn/Authz
+  - do **not** give users more data then they need so that they dont start reverse engineering our backend table structure.
+
+- **Frontend**:
+  - XSS (cross-site-scripting), avloid pasting unsanitised HTML directly
+  - use secure cookies
+  - CSRF tokens
+
+- **GDPR**:
+  - only store what is needed: do not store all user's info if a simple flag **purchased/didn't** is enough for our system
+  - be able to tell **who accesed** data and **when**.
+  - **automatically delete** after X period of time.
+
+??? A few more examples that I would like you to polish and help me fit into an answer:
+
+We actually have ADR documents that state how developers should work with security. They contain things I mentioned and many more. We always refer to them
+
+??? Do not actually understand what those mean and why they are so crucial for GDPR data: minimization, auditability, and retention/deletion requirements
+
+### Collaboration and mentorship. Have you ever been given an engineer and realised "oh this person does not know some technology from the stack" or "oh he does not have this soft skill or whatever" and you have to spend time mentoring them on something or has it been just "day-to-day communication and task discussions"
+
+We hired a **mid-level** engineer who was new to parts of our stack, so I acted as a **buddy** during onboarding.
+
+I focused on helping him understand our **system**, **business domain** and working style. I set up regular **1x1 meetings** for us to catch up regularly.
+
+One specific gap was **Kafka** that he did not work before. So I had to teach him `offsets`, `error handling`, `retries` etc.
+
+Once I understood that he became more confident I deliberately **stepped back** and we moved to normal code reviews and async communication
+
+### Tell me a failure of a mistake you did on a project, what did you learn, how did you prevent it from happening again
+
+I was responsible for moving that does **all** messaging logic (Login codes, booking confirmations, etc) into a dedicated **Messaging service**.  
+Service had to be deployed fast so i set up simple HTTP communication for all of those message requests.
+
+During peak traffic on Fridays, the service would **occasionally go down**. The problem **wasn’t detected by monitoring** — I only found out
+after a **user contacted support**, which was a serious gap.
+
+The root causes were twofold:
+
+1. There were **no health or alerting** signals for the service
+2. It was **tightly coupled** via synchronous HTTP calls, so traffic spikes caused cascading failures.
+
+**What i did:**
+
+- Redesigned the service to consume events asynchronously via **Kafka**. That **decoupled** it from traffic bursts and made failures visible immediately.
+- I added proper **availability** and **throughput alerts**.
+
+The key lesson for me was that production issues aren’t always about **fixing the bug** — they’re about fixing the system so the same class of failure wont’t **happen again**.
+
+### 💥 Biggest mistake EVER. It might not be your fault, just tell me about the biggest explosion you've seen at a project, what the result of it was
+
+A separate team were building **data-pipelines** for analytics that are processed via `Kafka`, `Snowflake`.
+They wanted to test **production-like data volumes** on staging.
+
+**They did two mistakes**:
+
+1. Forgot to set up a **spending limit** and **alert** on staging because why bother that is temporary anyway
+2. Forgot to shut staging off from production volumes.
+
+`Snowflake` compute and storage costs caused by **production-scale** data continuously flowing through staging, combined with **frequent processing jobs** resultee in
+a company receiveing an additoinal `50K $` bill from cloud provicer one day. We later negociated it to lower price but not good anyway.
+
+**Lesson I took from it:** Be careful with any big volumes of data, remember that prod, staging both run on real machines that cost real money, never fire and forget.
+
+### Incident commander. Do you have this process in the team ? Who manages the incident, what is the team that gets pulled in to help ? Is there an “incident coordinator” and other people who “do the actual work” for the incident ?
+
+We have **weekly on-call rotation**.
+
+When you are on shirt this is you **main** responsibility and all new features are secondary.
+
+Once incident finishes you are **responsible** for conducting **post-mortem call**. This is **not** to punish or to blame.  
+In a large organization where everything is highly systemised, incidents help us detect where our **architecture** or **assumptions** went wrong.
+
+On-call engineer acts as the incident commander. That means I’m responsible for:
+
+- coordination
+- assessing impact
+- deciding priorities
+- pulling in the **right people**: DevOps, SREs
+- Keeping communication **clear** — not necessarily fixing everything myself.
