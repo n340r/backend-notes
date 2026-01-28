@@ -177,7 +177,7 @@ The two main approaches are **Sharding** and **Replication**.
 
 ## Joins
 
-### 🔍 INNER JOIN
+### 🔍 INNER JOIN (default join)
 
 **Table A**
 
