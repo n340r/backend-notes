@@ -10,7 +10,7 @@ This one is dedicated to **HR** / **Behavioral** / **Engineering Manager** quest
 
 ## 🇬🇧 Basic
 
-### Tell us about your most recent workplace and the project you worked on.
+### ❓Tell us about your most recent workplace and the project you worked on.
 
 ---
 
@@ -32,7 +32,7 @@ Beyond feature development, a large part of my **day-to-day work** involved
 
 I was also involved in observability and production readiness, i did incident management, postmortems
 
-### what are you intrested in ?
+### ❓ What are you intrested in ?
 
 Overall, I enjoy solving **complex backend problems** with **many moving parts**.
 
