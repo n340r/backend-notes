@@ -395,7 +395,7 @@ With an index:
 
 > 💡 Index does not make sense with **low-cardinality** such as sex male / female where each value still matches ~50% of table. Index helps when you skip large portion of rows.
 
-### 🔧 How to Create Indexes
+### 🔧 Postgres Indexes
 
 1️⃣ **Single Column**
 

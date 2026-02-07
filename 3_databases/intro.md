@@ -20,12 +20,12 @@ In relational databases, **strict relationships** enforce _referential integrity
 <!-- TODO:
 real example of those tables -->
 
-## SQL Lessons
+## 👨‍🏫 SQL Lessons
 
 **[SQL introduction lessons](https://sqlbolt.com/)** - Spend 2-4 days (**NOT MORE**) to master those lessons.  
 This is for you to get basic idea on SQL. Skip or prompt for help, **you wont remember everything** anyway.
 
-## Types of databases
+## 🔠 Types of databases
 
 <!-- TODO: emoji for all of those types -->
 
@@ -76,7 +76,7 @@ use-cases -->
 
 <!-- todo -->
 
-## ACID vs BASE
+## ⚔️ ACID vs BASE
 
 ### ✅ ACID
 
@@ -120,7 +120,7 @@ Used in SQL, supported in MongoDB with transactions
 
 ## 🔐 Transactions
 
-**Transaction** - group several operations into one **atomic** operation. Either all succeed or nether do.  
+**Transaction** - group several steps into one **atomic** operation. Either all succeed or nether do.  
 It is a **fundamental thing for ACID** operations in Postgres.
 
 **Example:**
@@ -138,259 +138,361 @@ It is **all or nothing**. If anything goes wrong: - `ROLLBACK`
 
 ## ⚠️ Transaction Problems and Phenomena (ACID Issues)
 
-> 💡 Please **DO NOT** memorize transaction anomalies and isolation levels. You **should understand** them and be able give an **example**.
+Before we proceed any further, really really understand the following:
+
+- **Isolation levels** - define what you can see.
+- **Locks** define what others can do.
+
+Isolation levels, Locks **work together**.
 
 ### 🔄 Transaction Execution
 
 - **Sequential execution**: One transaction finishes before the next begins. **Safe but slow**.
 - **Parallel execution**: Multiple transactions run at the same time. Faster, but **can introduce conflicts**.
 
-**Databases like PostgreSQL and MongoDB allow parallel execution** with safeguards (isolation levels, locks).  
-If transactions touch **the same data**, they are executed **sequentially**, using locks.
+❗ Understand possible anomalies, then undersand system constraints and **only then decide** how to combat them.
+
+Databases like `PostgreSQL` and `MongoD` **allow parallel execution** with safeguards (isolation levels, locks).
 
 **Transaction Anomalies** - Those **might** appear if transactions run **in parallel**. Listed below
 
-### 1️⃣ Lost Update
+### Two lists of anomaly types
 
-> Not classified as a separate SQL anomaly but rather a consequence of insufficient isolation and lack of proper locking.
+**Read-related**
 
-**Real-world example**:  
-Two support-agents update a user's profile at the same time. Only one change is saved.
+- Dirty read
+- Non-repeatable read
+- Phantom read
 
-**Problem**: Two transactions update the same row. One overwrites the other's changes.
+**Write-related**
 
-**Why it happens**: No locking or poor isolation. Both read the same initial data, then write over each other.
+- Lost update
+- Write skew
 
----
+> 💡 These **write anomalies** are usually what causes **more problems** in modern databases
 
-### 2️⃣ Dirty Read
+**Global concern**
 
-**Real-world example**:  
-An app shows a hotel as "available" because a parallel transaction marked it free—but that transaction later rolls back.
-
-**Problem**: A transaction reads **uncommited data** that might be rolled back midway
-
-**Why it happens**: Reading "unconfirmed" changes.
+- Serialization anomaly - It is more af **a concept**. If it exists - **isolation is broken** !
 
 ---
 
-### 3️⃣ Non-repeatable Read
+### 1️⃣ Dirty Read
 
-**Real-world example**:  
-A library system checks a book's status, sees `free`, later in the same transaction check again, the book appears `borrowed`, then again, book is `free` again
+You see data that is **not even commited** by others. **Not possible** in postgres.
 
-**Problem**: A transaction reads **different commited data** in the process
+```sql
+-- Initial state:
+-- status = 'free'
 
-**Why it happens**: Another transaction updated and committed the row mid-process.
+T1 BEGIN
+T1 UPDATE status = 'occupied'
+-- not committed yet
 
----
+T2 BEGIN
+T2 SELECT status → 'occupied' ❌
+T2 COMMIT
 
-### 4️⃣ Phantom Read
+T1 ROLLBACK
 
-**Real-world example**:  
-A report is generated for "all bookings today" → another booking happens mid-report → second query includes more rows.
-
-**Problem**: A transaction re-runs a query and finds **new rows** that weren’t there before.
-
-**Why it happens**: Rows are inserted/deleted between identical `SELECT` queries.
-
----
-
-### 5️⃣ Serialization Anomaly
-
-**Real-world example**:
-
-- Starting balance = $1000
-- **Transaction A**: Adds $1000 to account.
-- **Transaction B**: Applies 10% interest.
-
-Possible outcomes if done **sequentially**:
-
-- A then B: $2000 → +10% → **$2200**
-- B then A: $1000 → +10% → $1100 → +$1000 → **$2100**
-
-But with poor isolation, a parallel execution might cause a **wrong result**, like **$3200**, which is **impossible** in any sequential order.
-
-**Problem**: The result of executing multiple parallel transactions **does not match any possible sequential order** of those transactions.
-
-**Why it matters**: Data integrity is broken. You can’t trace the outcome to any valid sequence of operations.
+-- Status is actually 'free'
+-- T2 read data that never existed
+```
 
 ---
 
-### 🧠 Summary of Anomalies
+### 2️⃣ Non-repeatable Read
 
-| Phenomenon            | Description                                                 | Real-life Example                        |
-| --------------------- | ----------------------------------------------------------- | ---------------------------------------- |
-| Lost Update           | One update overwrites another                               | Two users edit profile simultaneously    |
-| Dirty Read            | Read uncommitted changes from another transaction           | See hotel room that will later be locked |
-| Non-repeatable Read   | Row value changes within same transaction                   | Book status changed while borrowing      |
-| Phantom Read          | New rows appear on same query within transaction            | New bookings appear in report            |
-| Serialization Anomaly | Result doesn’t match _any_ sequential order of transactions | Bank account ends up with invalid amount |
+You read **different commited** states of the same data.
+
+```sql
+-- Initial state:
+-- status = 'free'
+
+T1 BEGIN
+T1 SELECT status → 'free'
+
+T2 BEGIN
+T2 UPDATE status = 'borrowed'
+T2 COMMIT
+
+T1 SELECT status → 'borrowed' ❌
+T1 COMMIT
+```
+
+---
+
+### 3️⃣ Phantom Read
+
+Every query gets **different number** of results.
+
+```sql
+-- Initial state:
+-- no bookings for today
+
+T1 BEGIN
+T1 SELECT COUNT(*) FROM bookings WHERE date = 'today' → 0
+
+T2 BEGIN
+T2 INSERT INTO bookings(date) VALUES ('today')
+T2 COMMIT
+
+T1 SELECT COUNT(*) FROM bookings WHERE date = 'today' → 1 ❌
+T1 COMMIT
+```
+
+### 4️⃣ Lost Update
+
+Transactions **overide** each other. **Last writer wins**
+
+```sql
+-- Initial state:
+-- balance = 100
+
+T1 BEGIN
+T1 SELECT balance → 100
+
+T2 BEGIN
+T2 SELECT balance → 100
+T2 UPDATE balance = 120
+T2 COMMIT
+
+T1 UPDATE balance = 110
+T1 COMMIT
+
+-- Final balance = 110 ❌
+-- T2 update is lost
+```
+
+---
+
+### 5️⃣ Write Skew
+
+System **invariant is broken**
+
+```sql
+-- Initial state:
+-- Alice = on_call
+-- Bob   = on_call
+
+-- Invariant: At least one employee MUST be on call
+
+T1 BEGIN
+T1 SELECT Alice, Bob → on, on
+T1 UPDATE Alice = off
+
+T2 BEGIN
+T2 SELECT Alice, Bob → on, on
+T2 UPDATE Bob = off
+
+T1 COMMIT
+T2 COMMIT
+
+-- Result:
+-- Alice = off
+-- Bob   = off ❌
+```
+
+### 6️⃣ Serialization Anomaly
+
+Very **specific** thing:
+
+**Parallel execution** must match **some sequential** execution, including what each transaction reads when it starts.
+
+It is much much more clear on examples. I'll give you two so that you **100%** understand it
+
+**Example 1**
+
+```sql
+-- Initial state:
+-- balance = 100
+
+-- T1: apply 10% interest
+T1 BEGIN
+T1 SELECT balance → 100
+T1 UPDATE balance = 110
+
+-- T2: deposit 100
+T2 BEGIN
+T2 SELECT balance → 100
+T2 UPDATE balance = 200
+
+T1 COMMIT
+T2 COMMIT  ← ❌ one transaction is aborted in SERIALIZABLE
+-- No way we can get 200 result sequentially
+```
+
+Lets inspect sequential execution options:
+
+```sql
+-- balance = 100
+T1 → 110
+T2 → 210
+
+-- result: 210
+```
+
+```sql
+-- balance = 100
+T2 → 200
+T1 → 220
+
+-- result: 220
+```
+
+**No way** we can get `200` sequentially !
+
+**Example 2**
+
+```sql
+-- Initial state:
+-- A = 10
+-- B = 10
+
+-- T1: update A
+T1 BEGIN
+T1 SELECT A, B → 10, 10
+T1 UPDATE A = 0
+
+-- T2: update B
+T2 BEGIN
+T2 SELECT A, B → 10, 10
+T2 UPDATE B = 0
+
+T1 COMMIT
+T2 COMMIT  ← ❌ one transaction is aborted in SERIALIZABLE
+-- no way one sees A, B -> 10, 10 after other transaction's actions
+```
+
+Lets inspect sequential execution options:
+
+```sql
+-- A = 10
+-- B = 10
+T1 A, B → 10, 10
+T2 A, B → 0, 10
+
+-- already mismatch, T2 sees 0, 10 NOT 10, 10
+```
+
+```sql
+-- A = 10
+-- B = 10
+T2 A, B → 10, 10
+T1 A, B → 10, 0
+
+-- already mismatch, T1 sees 10, 0 NOT 10, 10
+```
+
+**No way** one transaction gets a snapshot 10, 10 after other's actions !
+
+---
 
 ## 🔐 SQL Isolation Levels
 
-Isolation levels define how visible changes from other transactions are **during** a transaction.
+A few **important concepts** to understand first.
 
-Imagine you're working on a shared Google Doc.
+Imagine you have a transaction that does multiplt things:
 
-**Google Docs analogy**:  
-Each **person editing** is like a **transaction**.  
-The **Google Doc** is your **database**.  
-The **text you're editing** is the **data**.
+```sql
+SELECT ...
+UPDATE ...
+INSERT ...
+DELETE ...
+```
+
+**statement / query** - Each one of those `SELECT`, `UPDATE` ...
+**transaction** - A group of those (as you already know)
 
 ---
 
 ### 1️⃣ Read Uncommitted (🚫 Not actually used in PostgreSQL)
 
-**Google Docs analogy**:  
-You're watching another user type in real time—even if they haven't saved their changes yet.
+Even every statement inside transaction sees **uncommited** updates.
 
-- You see **live edits** (even if the other user deletes them seconds later).
-- You might copy text that vanishes because it was never saved.
-
-**Behavior**:
-
-- ✅ Fastest
-- ❌ Dirty reads possible
-- ❌ Not supported in PostgreSQL (internally treated as Read Committed)
+- ❌ None generally wants it. Not even supported in PostgreSQL (treated as Read Committed)
 
 ---
 
 ### 2️⃣ Read Committed (🔁 Default in PostgreSQL)
 
-**Google Docs analogy**:  
-You only see **what was saved** (committed) live _before each action you do_.
+Each **statement** gets it's own snapshot
 
-- You see **live edits** of saved edits.
+```sql
+T1 BEGIN
+T1 SELECT balance → 100
+T2 UPDATE balance → 200 COMMIT
+T1 SELECT balance → 200 ← changed!
+T1 COMMIT
+```
 
-**Prevents**:
-
-- ✅ Dirty reads  
-  **Allows**:
-- ❌ Non-repeatable reads
-- ❌ Phantom reads
+As you can see, between T1 **statements** other transactions can commit.
 
 ---
 
 ### 3️⃣ Repeatable Read (🧊 Snapshot of your session)
 
-**Google Docs analogy**:  
-Once you open the doc, you get a **frozen snapshot** of it.
+Each **transaction** gets it's own snapshot.
 
-- Others can still edit behind the scenes but your version **doesn’t change** until you leave and reopen the doc.
+```sql
+T1 BEGIN
+T1 SELECT balance → 100
+T2 UPDATE balance → 200 COMMIT
+T1 SELECT balance → 100 ← unchanged
+T1 COMMIT
+```
 
-**Prevents**:
-
-- ✅ Dirty reads
-- ✅ Non-repeatable reads
-- ✅ Phantom reads (in PostgreSQL)
-
----
-
-### 4️⃣ Serializable (📦 Strictest, safest)
-
-**Google Docs analogy**:  
-You're the **only one allowed to edit** for now.  
-Like **Repeatable Read** + others are not allowed to edit at all
-
-- If two people try to edit the same text, one must wait—or be forced to restart.
-- All parallel edits behave **as if** they happened **one at a time**, in some sequence.
-
-**Prevents**:
-
-- ✅ Dirty reads
-- ✅ Non-repeatable reads
-- ✅ Phantom reads
-- ✅ Serialization anomalies
-
-**Tradeoff**:
-
-- ✅ Maximum data safety
-- ❌ Slower (may block or rollback under high concurrency)
-
-<!-- todo:
-revisit examles on those isolation levels because i found out serializable is not needed even for mone -->
+It is like each **transaction** gets it's own copy (snapshot).
 
 ---
 
-### 🗂️ Summary Table
+## 📦 Serializable
 
-| Isolation Level  | Dirty Read | Non-repeatable Read | Phantom Read | Serializable Anomaly   | Notes                               |
-| ---------------- | ---------- | ------------------- | ------------ | ---------------------- | ----------------------------------- |
-| Read Uncommitted | ✅ Allowed | ✅ Allowed          | ✅ Allowed   | ✅ Allowed             | PostgreSQL treats as Read Committed |
-| Read Committed   | ❌ No      | ✅ Allowed          | ✅ Allowed   | ✅ Allowed             | Default in PostgreSQL               |
-| Repeatable Read  | ❌ No      | ❌ No               | ❌ No        | ✅ Allowed (in theory) | PostgreSQL blocks phantoms          |
-| Serializable     | ❌ No      | ❌ No               | ❌ No        | ❌ No                  | Most strict, safest                 |
+Serialization anomaly is **not possible**
 
-> ℹ️ **Lost Update** is not listed as a formal "read phenomenon" but is a real issue.
+---
 
-> Default isolation level in PG is `READ COMMITED`
+> 💡 Default isolation level in PG is `READ COMMITED`
 
-> Isolation levels can be configured _per-query_, _per-session_
+> 💡 Isolation levels can be configured _per-query_, _per-session_
 
 ## 🔒 Locks in PostgreSQL
-
-Locks designed to ensure data consistency when multiple transactions access it simultaneously.
-
-Think **edit access** rules in Google Docs.
 
 ### Types of Locks
 
 Locks differ by their _behaviour_ and _scale_
 
-### 📏 Different types of lock scale
+### 📏 Scales of locking
 
-| Lock Type          | Description                                     |
-| ------------------ | ----------------------------------------------- |
-| **Row-level**      | Locks individual rows (`SELECT ... FOR UPDATE`) |
-| **Table-level**    | Locks the entire table (`LOCK TABLE users`)     |
-| **Database-level** | Locks entire DB (e.g., during backup/restore)   |
+| Lock Type          | Description                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Row-level**      | (**99%** of the time) Locks individual rows - `SELECT ... FOR UPDATE`                       |
+| **Table-level**    | (Maintenance, one-off migrations) Locks the entire table (`LOCK TABLE users`)               |
+| **Database-level** | (Mostly **implicit**: cooordination, backups) Locks entire DB (e.g., during backup/restore) |
+
+> 💡 In real life **locking** almost always refers to row-level locks.
+
+**Small note on table locks**
+
+Table locks have different modes. They are out of scope for normal interviews and daily backend work, but it’s important to know that table locking can be used:
+
+- For maintenance,
+- To allow only reads,
+- Or to block everything (including reads).
 
 ### 🧩 Pessimistic Locking behaviour
 
-Assume conflict will happen
+**Prevent conflicts** by locking the data you work with. Noone else can access **while** you work
 
-**Google Docs analogy**:  
-You “lock” a paragraph so others **can’t edit it** while you’re working.
-
-- Use: `SELECT ... FOR UPDATE`
-- Others can **see** the data, but not change it.
-- Prevents race conditions.
-- **Slower** due to many locks.
+1. You assume **conflict will** happen.
+2. **Retries are expensive** for us.
 
 ### 🧩 Optimistic Locking behaviour
 
-<!-- todo: Do i get it right that in this case app should detect conflicts ? -->
+**Detect conflicts** by retrying either on database level (Serializable) or app level (retries)
 
-Optimistic locking assumes **conflicts are rare** and **app detects** them at write time, **not by locking** data upfront.
-
-**Google Docs analogy**:  
-Everyone can edit freely. When you click save, Google checks if someone else has changed the same paragraph.  
-If yes, you get a **conflict warning**.
-
-Process in a nutshell:
-
-- Do `transaction 1` on the row `WHERE id = 10 AND version = 10`, then **increment** version
-- Next `transaction 2` tries to work on the same row `WHERE id = 10 ADN version = 10` but encounters `version = 11` hence `0` rows affected.
-- App checks, if `0` rows affected - error or retry
-
-### Extra notes on lock types
-
-<!-- todo: those conceps sound too much to me: row exclusive, row share, access excluseive, share update exclusive - do i
-actually need to know all this for real life and even interviews ? -->
-
-> 💡 `SHARE` in case of DB means read as long as you are not writing.
-
-> All of those locks below are **table-scoped**
-
-| Lock Mode                  | Blocks                           | Typical usage                        | Google Docs analogy                                      |
-| -------------------------- | -------------------------------- | ------------------------------------ | -------------------------------------------------------- |
-| **Row Exclusive**          | DDL like DROP/TRUNCATE           | Auto by `INSERT`, `UPDATE`, `DELETE` | Editing a paragraph; can’t delete document while editing |
-| **Row Share**              | DDL requiring exclusive lock     | `SELECT ... FOR SHARE`               | Reading, commenting but doc can’t be deleted             |
-| **Share**                  | Writers (`INSERT/UPDATE/DELETE`) | `LOCK TABLE ... IN SHARE MODE`       | Everyone can read, no one can type                       |
-| **Share Update Exclusive** | Other VACUUM/DDL                 | Internal (VACUUM)                    | System doing background cleanup                          |
-| **Exclusive**              | All reads/writes by others       | `LOCK TABLE ... IN EXCLUSIVE MODE`   | You fully “checked out” document; others wait            |
-| **Access Exclusive**       | Everything                       | `ALTER`, `DROP`, `TRUNCATE`          | Admin locks doc for restructure; no access               |
+1. Conflicts are **rare**, retries are **cheap**.
+2. High throughput needed - locking data **will slow** us down the app.
 
 ## Deadlocks
 
