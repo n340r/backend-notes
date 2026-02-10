@@ -432,7 +432,7 @@ As you can see, between T1 **statements** other transactions can commit.
 
 ### 3️⃣ Repeatable Read (🧊 Snapshot of your session)
 
-Each **transaction** gets it's own snapshot.
+Transaction gets **one snapshot** of data that **each SELECT** insisde it sees.
 
 ```sql
 T1 BEGIN
@@ -442,7 +442,39 @@ T1 SELECT balance → 100 ← unchanged
 T1 COMMIT
 ```
 
-It is like each **transaction** gets it's own copy (snapshot).
+It is like each **SELECT** gets it's own copy (snapshot).
+
+> ❗ Now **important part**. Take a step back and **remember** that isolation levels are for what **you can see**
+
+`UPDATE` / `DELETE` **lock and write** against the **latest committed** row version
+
+- They automatically take a **row-level lock**
+- If updates used only the snapshot, you’d get **silent wrong writes** (“writing into the past”)
+
+```sql
+-- T1
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+SELECT balance FROM accounts WHERE user_id = 123;  -- 150 (from T1 snapshot)
+
+-- T2 (in parallel)
+BEGIN ISOLATION LEVEL REPEATABLE READ;
+UPDATE accounts
+SET balance = balance - 100
+WHERE user_id = 123;
+COMMIT;  -- balance becomes 50
+
+-- T1 (continues)
+SELECT balance FROM accounts WHERE user_id = 123;  -- still 150 (snapshot!)
+UPDATE accounts -- acquires row-level lock
+SET balance = balance - 100 -- balance: 50 - 100 = -50
+WHERE user_id = 123;
+COMMIT;
+
+-- you can imagine what would happen if T1 wrote into snapwhot
+-- we would silently get T1: balance = 150 - 100 = 50 (overriding T1 result !)
+```
+
+> ❗ Select then write **makes no sense**. Use one-statement invariants `UPDATE accounts SET balance ... WHERE ...`
 
 ---
 
@@ -496,8 +528,8 @@ Table locks have different modes. They are out of scope for normal interviews an
 
 ## Deadlocks
 
-Two or more transactions mutually block each other.  
-PostgreSQL automatically detects deadlocks and aborts one of the transactions.  
+Two or more transactions mutually block each other.
+PostgreSQL automatically detects deadlocks and aborts one of the transactions.
 Throws an error that should be handled by the application.
 
 <!-- todo: example of a deadlock from wallrm interview -->
@@ -506,7 +538,7 @@ Throws an error that should be handled by the application.
 
 ### ORM (Object-Relational Mapping)
 
-ORM provides an **abstraction layer** over the SQL language and database, you interact with DB in an **object-oriented** paradigm.  
+ORM provides an **abstraction layer** over the SQL language and database, you interact with DB in an **object-oriented** paradigm.
 You define models, those map to database tables, and then **ORM itself decides** how to generate SQL and run it in your DB.
 
 > 💡 Most **experienced** backend devs **dislike** ORMs. Some ORMs **fail** to do their job. **Prisma** cannot use same models on both **MySQL** and **Postgres**.
@@ -566,7 +598,7 @@ Simple API to build queries, greater control over the generated SQL. **DO NOT** 
 - Many-to-Many `Students` <--> `Courses`
 
 **Link Table (Junction Table)**
-Helps manage **many-to-many** relationships.  
+Helps manage **many-to-many** relationships.
 Contains foreign keys from both related tables.
 **Example:** `People` <--> `Events` through a `registrations` table.
 
