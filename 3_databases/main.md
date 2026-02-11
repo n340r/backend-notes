@@ -411,18 +411,28 @@ CREATE INDEX idx_email ON users (email);
 For multiple columns
 
 ```sql
-CREATE INDEX idx_status_amount ON orders (status, total_amount);
+CREATE INDEX idx_status_amount ON orders (use_id, city, status);
 ```
 
-⚠️ **Order matters** in composite indexes:
+TODO: order of index - matters. order of select, where - does not.
+what matters in a query is if you include leftmost elements.
+/
+index looks like this in memory:
+/
 
-- Index is built left-to-right.
-- It will only be used if the first column is filtered.
-- ✅ `sql WHERE status = 'paid'` → index is used
-- ✅ `WHERE status = 'paid' AND total_amount > 100` → index is used
-- ❌ `WHERE total_amount > 100` → index not used (because status is not used in WHERE)
+```text
+user_id →
+  inside of it: city →
+    inside of it: status
+```
 
-> 💡 Think of it an address book sorted by **last name** first, then **first name**. You can't efficiently look it up by just **first name**.
+WHERE user_id --> works
+WHERE user_id, city --> works
+WHERE city, user_id --> still works, postgres can search index all the way from left to right
+WHERE status, city, user_id --> still works
+//
+WHERE status -> does not work
+WHERE city, status --> does not work
 
 3️⃣ **Unique Index**
 
