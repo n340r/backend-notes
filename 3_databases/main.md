@@ -462,6 +462,68 @@ Reduces overhead for **less-used** rows.
 CREATE INDEX idx_large_orders ON orders (total_amount) WHERE total_amount > 1000;
 ```
 
+### 🔧 Basic index creation rules
+
+Suppose you have this query
+
+```sql
+SELECT user_id, status, amount
+FROM orders
+WHERE
+	user_id = 'uuid' AND
+	city = 'Mexico' AND
+	status = 'PENDING' AND
+	amount < 1000 AND
+	created_at > '2025-02-02'
+ORDER BY created_at DESC
+```
+
+I'll explain for composite index which is B-tree for **multiple columns**.
+
+Index is a **sorted tree** of **groups of columns**. I'll show you what i mean:
+
+If your index is:
+
+```sql
+(user_id, city, status, created_at, amount)
+```
+
+Then it looks like this in memory:
+
+```sql
+first sorted by user_id
+inside of it by city
+inside of it by status
+inside of it by created_at
+insdie of it by amount
+```
+
+There is a rule for **creating B-tree index**
+
+1. **Equality** (we jump into the right branch)
+2. **Range** (we scan from X to Y)
+
+We first select column to match exactly - `user_id`, `city`, `status`
+
+Then decide on which **range** column to include first because searching by it will be most effective. We **consider**:
+
+- `ORDER BY` usage in a query (Most important)
+- Selectivity
+- Typical **query patterns**
+
+In our case we clearly use `... ORDER BY created_at DESC` so we place it **right after equality** columns.
+
+Again, if there were not `ORDER BY` we think about **selectivity**. If `amount < 1000` **reduces 80%** or rows, then take amount.
+
+Final index:
+
+```sql
+CREATE INDEX idx_orders_main
+ON orders (user_id, city, status, created_at DESC, amount);
+```
+
+> 💡 Second range `amount` can **no longer be used** for tree navigaiton same as `created_at`. But can be used for filtering
+
 ### ⏳ Concurrent index creation
 
 <!-- todo: feels like this should be renamed to creating index in a running app under load or something -->
