@@ -354,6 +354,33 @@ CROSS JOIN B;
 | `FULL JOIN`  | 🌀 Combination | Returns **all rows when there is a match in one of the tables**, left or right |
 | `CROSS JOIN` | 🔁 Cartesian   | Returns **all possible combinations** of rows from both tables                 |
 
+## Aggregate functions, order of queries
+
+**Common aggregate functions**:
+
+- `COUNT`
+- `SUM`
+- `MIN`
+- `MAX`
+
+**Where they can be used**:
+
+- `SELECT`
+- `HAVING`
+- ❌ **NOT** in `WHERE`
+
+```sql
+FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT
+```
+
+```sql
+SELECT country, COUNT(*) AS users
+FROM users
+WHERE active = true -- filters rows
+GROUP BY country
+HAVING COUNT(*) > 100 -- filters groups
+```
+
 ## 📚 Indexes in Databases (PostgreSQL + MongoDB)
 
 Indexes are special data structures that help databases **search faster** by avoiding full table scans.
