@@ -173,7 +173,7 @@ Databases like `PostgreSQL` and `MongoD` **allow parallel execution** with safeg
 
 **Global concern**
 
-- Serialization anomaly - It is more af **a concept**. If it exists - **isolation is broken** !
+- Serialization anomaly - transactions running in parallel give us result that is not achievable with sequential execution.
 
 ---
 
@@ -249,26 +249,24 @@ Transactions **overide** each other. **Last writer wins**
 -- Initial state:
 -- balance = 100
 
+-- T1: apply 10% interest
 T1 BEGIN
 T1 SELECT balance → 100
-
-T2 BEGIN
-T2 SELECT balance → 100
-T2 UPDATE balance = 120
-T2 COMMIT
-
 T1 UPDATE balance = 110
-T1 COMMIT
 
--- Final balance = 110 ❌
--- T2 update is lost
+T2 BEGIN -- in parallel
+T2 SELECT balance → 100 -- T2: deposit 100
+T2 UPDATE balance = 200
+
+T1 COMMIT
+T2 COMMIT
 ```
 
 ---
 
 ### 5️⃣ Write Skew
 
-System **invariant is broken**
+Two transactions read **overlapping data**, but update **disjoint** rows, and together they **violate an invariant**.
 
 ```sql
 -- Initial state:
@@ -288,103 +286,36 @@ T2 UPDATE Bob = off
 T1 COMMIT
 T2 COMMIT
 
--- Result:
+-- They did NOT update the same state, but result is wrong.
 -- Alice = off
 -- Bob   = off ❌
 ```
 
 ### 6️⃣ Serialization Anomaly
 
-Very **specific** thing:
-
-**Parallel execution** must match **some sequential** execution, including what each transaction reads when it starts.
-
-It is much much more clear on examples. I'll give you two so that you **100%** understand it
-
-**Example 1**
+PostgreSQL tracks when one transaction **reads a row** that another concurrent transaction **later modifies**.
 
 ```sql
 -- Initial state:
--- balance = 100
 
--- T1: apply 10% interest
+-- Alice = on_call
+-- Bob   = on_call
+
 T1 BEGIN
-T1 SELECT balance → 100
-T1 UPDATE balance = 110
+-- T1 read Alice, Bob, but T2 updates Bob. Well, to get this read we need T1 -> T2
+T1 SELECT Alice, Bob → on, on
+T1 UPDATE Alice = off
 
--- T2: deposit 100
 T2 BEGIN
-T2 SELECT balance → 100
-T2 UPDATE balance = 200
+-- But T2 read Alice, Bob, T1 updates Alice! Okay, then order should be T2 -> T1
+T2 SELECT Alice, Bob → on, on
+T2 UPDATE Bob = off
 
 T1 COMMIT
-T2 COMMIT  ← ❌ one transaction is aborted in SERIALIZABLE
--- No way we can get 200 result sequentially
+T2 COMMIT
+
+-- What we basically end up with T1 <--> T2 depend on each other - not possible sequentially
 ```
-
-Lets inspect sequential execution options:
-
-```sql
--- balance = 100
-T1 → 110
-T2 → 210
-
--- result: 210
-```
-
-```sql
--- balance = 100
-T2 → 200
-T1 → 220
-
--- result: 220
-```
-
-**No way** we can get `200` sequentially !
-
-**Example 2**
-
-```sql
--- Initial state:
--- A = 10
--- B = 10
-
--- T1: update A
-T1 BEGIN
-T1 SELECT A, B → 10, 10
-T1 UPDATE A = 0
-
--- T2: update B
-T2 BEGIN
-T2 SELECT A, B → 10, 10
-T2 UPDATE B = 0
-
-T1 COMMIT
-T2 COMMIT  ← ❌ one transaction is aborted in SERIALIZABLE
--- no way one sees A, B -> 10, 10 after other transaction's actions
-```
-
-Lets inspect sequential execution options:
-
-```sql
--- A = 10
--- B = 10
-T1 A, B → 10, 10
-T2 A, B → 0, 10
-
--- already mismatch, T2 sees 0, 10 NOT 10, 10
-```
-
-```sql
--- A = 10
--- B = 10
-T2 A, B → 10, 10
-T1 A, B → 10, 0
-
--- already mismatch, T1 sees 10, 0 NOT 10, 10
-```
-
-**No way** one transaction gets a snapshot 10, 10 after other's actions !
 
 ---
 
@@ -435,7 +366,8 @@ As you can see, between T1 **statements** other transactions can commit.
 Transaction gets **one snapshot** of data that **each SELECT** insisde it sees.
 
 ```sql
-T1 BEGIN
+-- balance = 100
+T1 BEGIN -- snapthot balance = 100
 T1 SELECT balance → 100
 T2 UPDATE balance → 200 COMMIT
 T1 SELECT balance → 100 ← unchanged
@@ -444,14 +376,11 @@ T1 COMMIT
 
 It is like each **SELECT** gets it's own copy (snapshot).
 
-> ❗ Now **important part**. Take a step back and **remember** that isolation levels are for what **you can see**
-
-`UPDATE` / `DELETE` **lock and write** against the **latest committed** row version
-
-- They automatically take a **row-level lock**
-- If updates used only the snapshot, you’d get **silent wrong writes** (“writing into the past”)
+> ❗ Very **critically important bit**. If **parallel** transactions try to change **same row** - ERROR
 
 ```sql
+-- balance = 150
+
 -- T1
 BEGIN ISOLATION LEVEL REPEATABLE READ;
 SELECT balance FROM accounts WHERE user_id = 123;  -- 150 (from T1 snapshot)
@@ -465,13 +394,12 @@ COMMIT;  -- balance becomes 50
 
 -- T1 (continues)
 SELECT balance FROM accounts WHERE user_id = 123;  -- still 150 (snapshot!)
-UPDATE accounts -- acquires row-level lock
-SET balance = balance - 100 -- balance: 50 - 100 = -50
+UPDATE accounts
+SET balance = balance - 100  -- PG is like, let me check if balance was updated in the meantime ... it was, ABORT !
 WHERE user_id = 123;
 COMMIT;
 
--- you can imagine what would happen if T1 wrote into snapwhot
--- we would silently get T1: balance = 150 - 100 = 50 (overriding T1 result !)
+-- ERROR: could not serialize access due to concurrent update
 ```
 
 > ❗ Select then write **makes no sense**. Use one-statement invariants `UPDATE accounts SET balance ... WHERE ...`
@@ -514,17 +442,33 @@ Table locks have different modes. They are out of scope for normal interviews an
 
 ### 🧩 Pessimistic Locking behaviour
 
-**Prevent conflicts** by locking the data you work with. Noone else can access **while** you work
+**Prevent conflicts** by locking the data bofore modifying.
 
-1. You assume **conflict will** happen.
-2. **Retries are expensive** for us.
+You assume **conflict will** happen or **retries are expensive** for us.
+
+Mechanism: `SELECT ... FOR UPDATE`
+
+**Effect**:
+
+- other transactions block
+- no retry needed
+- lower concurrency
 
 ### 🧩 Optimistic Locking behaviour
 
 **Detect conflicts** by retrying either on database level (Serializable) or app level (retries)
 
-1. Conflicts are **rare**, retries are **cheap**.
-2. High throughput needed - locking data **will slow** us down the app.
+Conflicts are **rare**, retries are **cheap**. High throughput needed - locking data **will slow** us down the app.
+
+**Mechanisms**:
+
+- `Serializable` on DB
+- detect-retry **by app**
+
+**Effect**:
+
+- No blocking
+- May abort, needs retry
 
 ## Deadlocks
 
