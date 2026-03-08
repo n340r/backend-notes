@@ -50,13 +50,19 @@ user --> service --> database (монолит) - это **плохо**
 
 - Traffic (Нагрузка на API Gateway)
 - RPS (Request Per Second) - нагрузка по ручкам конкретных сервисов
-- Storage (Нагрузка на БД, Кэш)
+- Storage: disk space (Postgres), in-memory (Redis)
+
+> 💡 8 byte (each row in a table approx) + 40 byte (overhead) + indexes (slightly less then data itself)
 
 **Что спрашивать**:
 
 Или делать допущения "допустим, у нас такая-то доля рынка, то есть столько-то пользователей"
 
-- DAU (Daily Active Users)
+- **MAU** (Monthly Active Users) - уникальные пользователи в месяц
+- **DAU** (Daily Active Users) - уникальные пользователи в день
+
+> 💡 MAU можно считать кол-вом пользователей вообще, помогает посчитать записи в БД
+> 💡 DAU + раз в какое время пользователь делает действие = помогают понять RPS
 
 - **Как считать**:
 

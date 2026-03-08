@@ -356,6 +356,13 @@ process message
 commit offset
 ```
 
+### Kafka --> DB exactly once
+
+- idempotent producer (prevents duplicates caused by producer retries)
+- `message_id` (typically uuid_v4) so that consumer does not run business logic again when replaying message
+- poll the message from kafka
+- begin TX, store the data, store to `processed` table, commit TX, commit offset
+
 ## Transactions in brokers
 
 - **Requires** Idempotent producer (identify duplicate messages), Transactional ID (identify same producer identity)
