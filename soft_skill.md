@@ -43,7 +43,7 @@ I’m motivated to keep deepening my knowledge in this area and to share that kn
 
 ### Tell us about your team at your last job. How were responsibilities distributed? How did collaboration work?
 
-- I worked across **several cross-functional teams**, typically \*10–15 people\*\* split into smaller sub-teams depending on the project. All developers were fullstack, so responsibility was shared — if you pick up a feature, you own both the backend and frontend parts.
+- I worked across **several cross-functional teams**, typically **10–15 people** split into smaller sub-teams depending on the project. All developers were fullstack, so responsibility was shared — if you pick up a feature, you own both the backend and frontend parts.
 - Process itself is a modified scrum. What this means is we have **2-week sprints**, **Grooming and planning** at the  
   beginning of each sprint, **no daily standups** - instead we do short project sync meetings twice a week and async
   communication, **team-wide retro** at the end of each sprint
