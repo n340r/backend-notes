@@ -274,7 +274,7 @@ I broke the work down so that
 
 The way we progressed quite fast without loosing quality and going into miss-communication:
 
-- I **always discussed** in advance on a high level the \**approach he would take*8 to implement something rather than rushing right in and giving me a surprise on a code review
+- I **always discussed** in advance on a high level the **approach he would take** to implement something rather than rushing right in and giving me a surprise on a code review
 - Always be available for the **questions**.
 - Frequent **code reviews**, splitting code into tiny pieces.
 
@@ -306,7 +306,7 @@ I'll give you three examples of answering this question:
 
 We had an OOM incident where a pricing service loaded all bookings of a hotel into memory for Kafka events. During Black Friday this caused unbounded memory growth
 
-We obviously changed this ineffician algorithm, started processing those bookings in batches.
+We obviously changed this Inefficient algorithm, started processing those bookings in batches.
 
 **What i added:**
 
@@ -317,11 +317,11 @@ We obviously changed this ineffician algorithm, started processing those booking
 
 2. 💥 Missing **204 statuses**
 
-Backend changed an availability endpoint `GET /availability?hotelId=123&dates=...` toreturn `204` for **no-data** but we did not have
+Backend changed an availability endpoint `GET /availability?hotelId=123&dates=...` to return `204` for **no-data** but we did not have
 a metric for it. Frontend **missed the task** on upating their status to `204` - maybe task got lost due to it being
 **seemingly insignificant**.
 
-This caused \*8request amplification** and OOM in the **availability\*\* service
+This caused **request amplification** and OOM in the **availability** service
 
 After backend with a new return status rolled out
 
@@ -334,12 +334,12 @@ After backend with a new return status rolled out
 3. 💥 Alert fatigue during peak load.
 
 **Alerts** and triggers weren’t adjusted” along with scaling the system.  
-Engineers **ignored important** alerts because they **drowned** in **alert noise**.
+Engineers **ignored important** problems because they **drowned** in **alert noise**.
 
 **What i added:**
 
-- Scaling-aware alerts. Change triggers with system scaling
-- **percentage-based** error rates rather than static numbers
+- Scaling-aware alerts. Change triggers with system scaling.
+- **percentage-based** error rates rather than static numbers.
 
 ---
 
@@ -362,7 +362,7 @@ Turned out we had **useless** stage **Kafka topic backups** and **database snaps
 
 2. 💥 Option 2. SQS + Kinesis
 
-Since we process a lot of use behavior from search and hotel managment, we had a legacy `SQS` queue + `Kinesis` streaming pair for those.
+Since we process a lot of user behavior from search and hotel managment, we had a legacy `SQS` queue + `Kinesis` streaming pair for those.
 
 I actually saw the usage cost for both of those, **validated the change** with a staff engineer and decided to migrate event processing logic with Kafka
 becaues **throughput allows** it and we win pricing-wise.
@@ -387,13 +387,11 @@ We obviously **do not write** business logic for metrics but observability is **
 To me **this means** developing the code so that there are **explicit boundaries** and **separation of concerns**.
 
 Monitoring one thing or another is **only possible** when there are **boundaries**. When everything happens in one function or one service or one API request then it would
-be more difficult for us to find out what exactly is wrong
+be **more difficult** for us to find out what exactly is wrong
 
-We often have issues with performance and metrics help us identify wether that is **kafka memory**, **backpressure** / **consumer lag**, **database** is a bottleneck
+We often have issues with performance and metrics help us identify wether that is **kafka memory**, **backpressure** / **consumer lag**, **database** is a bottleneck.
 
 ### Switching away from the tech a little bit. Tell me about a time you've really understood your end-users. How has your knowledge or understanding of end-users changed the way you designed or implemented a feature ?
-
-Please help me correctly structure this, choose the best option
 
 1. **👥 Option 1: Promo banner placement**.
 
@@ -407,7 +405,7 @@ and info that we received from the frontend.
 
 2. **👥 Option 2: Conversion rate drop**.
 
-I saw a noticeable drop in search to book **conversion** and found out that at the same time **search response times **increased** due to a **database issue\*\*.
+I saw a noticeable drop in search to book **conversion** and found out that at the same time **search response times increased** due to a **database issue**.
 
 That basically **reinforced the idea** that search is not a feature, it is a **core user expectation**. As a result of that we not only resolved the existing issue,  
 we improved **caching**, **optimised** DB, added **tighter latency metrics** for search and filtering related api-endpoints.
